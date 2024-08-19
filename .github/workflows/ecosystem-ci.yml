@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: "0 5 * * 1,3,5" # monday,wednesday,friday 5AM
 
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: main
+
 jobs:
   build-biome:
     name: Build Biome
@@ -14,7 +21,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           repository: biomejs/biome
-          ref: main
+          ref: ${{ inputs.ref }}
 
       - name: Install toolchain
         uses: moonrepo/setup-rust@e013866c4215f77c925f42f60257dec7dd18836e # v1.2.1
