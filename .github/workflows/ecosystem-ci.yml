@@ -1,0 +1,186 @@
+name: Biome Ecosystem CI
+
+permissions:
+  contents: none
+
+on:
+  schedule:
+    - cron: "0 5 * * 1,3,5" # monday,wednesday,friday 5AM
+
+  workflow_dispatch:
+    inputs:
+      biome-ref:
+        description: biomejs/biome reference to checkout
+        type: string
+        default: main
+
+jobs:
+  build-biome:
+    name: Build Biome (${{ inputs.biome-ref }})
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Biome
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          repository: biomejs/biome
+          ref: ${{ inputs.biome-ref }}
+
+      - name: Install toolchain
+        uses: moonrepo/setup-rust@e013866c4215f77c925f42f60257dec7dd18836e # v1.2.1
+        with:
+          cache-target: release
+          cache-base: main
+
+      - name: Build Biome binary
+        env:
+          # We set `BIOME_VERSION` to disable the recommended rules from the nursery group
+          BIOME_VERSION: 0.0.0
+          RUSTFLAGS: -C debug-assertions
+        run: |
+          cargo build --bin biome --release
+
+      - name: Upload Biome binary
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        with:
+          if-no-files-found: error
+          retention-days: 10
+          name: biome
+          path: ./target/release/biome
+
+  test-ecosystem:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Add projects to test here
+          # Supported fields:
+          # - repository: GitHub repository to checkout
+          # - ref: ref to checkout (default is the default branch)
+          # - working-directory: where to execute `biome` (default is the root of the repository)
+          #   The path is relative to the root of the repository
+          # - arguments: extra arguments to pass to the `biome check` command (default is `.`)
+          - repository: ant-design/ant-design
+          - repository: withastro/astro
+          - repository: getsentry/sentry
+          - repository: preactjs/preact
+          - repository: saadeghi/daisyui
+          - repository: refinedev/refine
+          - repository: discordjs/discord.js
+          - repository: pulumi/pulumi
+            working-directory: sdk/nodejs/
+          - repository: HumanSignal/label-studio
+            working-directory: web/
+          - repository: plotly/plotly.js
+          - repository: fastapi/full-stack-fastapi-template
+            working-directory: frontend/
+          - repository: spicetify/cli
+          - repository: apify/crawlee
+            arguments: --organize-imports-enabled=false .
+          - repository: baidu/amis
+            working-directory: packages/office-viewer/
+            arguments: --organize-imports-enabled=false .
+          - repository: steven-tey/novel
+            working-directory: apps/web/
+            arguments: --organize-imports-enabled=false .
+          - repository: steven-tey/novel
+            working-directory: packages/headless/
+          - repository: Unleash/unleash
+          - repository: tamagui/tamagui
+          - repository: runtipi/runtipi
+          - repository: voxel51/fiftyone
+            working-directory: app/packages/app/
+            arguments: ./src
+          - repository: voxel51/fiftyone
+            working-directory: app/packages/spotlight/
+            arguments: ./src
+          - repository: voxel51/fiftyone
+            working-directory: app/packages/looker-3d/
+            arguments: ./src
+          - repository: rescript-lang/rescript-compiler
+          - repository: adazzle/react-data-grid
+          - repository: webpro-nl/knip
+          - repository: wevm/wagmi
+          - repository: melonjs/melonJS
+          - repository: unjs/nitro
+          - repository: max-mapper/menubar
+          - repository: wojtekmaj/react-pdf
+            arguments: --organize-imports-enabled=false .
+          - repository: getsentry/sentry-javascript
+          - repository: askorama/orama
+            arguments: --organize-imports-enabled=false .
+          - repository: ariakit/ariakit
+          - repository: coder/coder
+            working-directory: site/
+            arguments: e2e/ src/
+          - repository: google/mesop
+          - repository: openapi-ts/openapi-typescript
+            working-directory: packages/openapi-fetch/
+          - repository: openapi-ts/openapi-typescript
+            working-directory: packages/openapi-react-query/
+          - repository: openapi-ts/openapi-typescript
+            working-directory: packages/openapi-typescript-helpers/
+          - repository: fontsource/fontsource
+            arguments: --organize-imports-enabled=false .
+          - repository: farm-fe/farm
+          - repository: microsoft/FluidFramework
+          - repository: web-infra-dev/rspack
+
+    name: Test ${{ matrix.repository }} ${{ matrix.working-directory }}
+    needs: build-biome
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Biome binary
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: biome
+          path: bin/
+
+      - run: |
+          chmod +x bin/biome
+          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
+
+      - name: Checkout ${{ matrix.repository }}
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          repository: ${{ matrix.repository }}
+          ref: ${{ matrix.ref }}
+          path: repository
+
+      - name: Test details
+        id: test
+        working-directory: repository/${{ matrix.working-directory }}
+        run: |
+          biome check --error-on-warnings --max-diagnostics=250 ${{ matrix.arguments || '.' }}
+
+      - name: Test summary
+        if: ${{ failure() }}
+        working-directory: repository/${{ matrix.working-directory }}
+        run: >-
+          biome check --error-on-warnings --reporter=summary ${{ matrix.arguments || '.' }}
+
+      # Steps to notify Discord
+      - name: Notification tag
+        if: ${{ always() }}
+        id: notification
+        working-directory: repository/${{ matrix.working-directory }}
+        run: |
+          if ${{ steps.test.outcome == 'success' }}; then
+            TAG='✅'
+          elif ${{ steps.test.outcome == 'failure' }}; then
+            TAG='❌'
+          else
+            TAG='❓'
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Discord
+        if: ${{ always() && steps.notification.outputs.TAG }}
+        uses: tsickert/discord-webhook@86dc739f3f165f16dadc5666051c367efa1692f4 # v6.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          content: "${{ steps.notification.outputs.TAG }}	\
+            biome(**${{ inputs.biome-ref || 'main' }}**)	\
+            **${{ matrix.repository }}**/${{ matrix.working-directory }}	\
+            [action](<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>)"
