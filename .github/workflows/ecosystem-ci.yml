@@ -6,16 +6,27 @@ on:
 
   workflow_dispatch:
     inputs:
+      # Manual workflow runs
       ref:
         required: false
         type: string
         default: main
+      # Workflow run via comments in biomejs/biome PRs
+      # See https://github.com/peter-evans/create-or-update-comment?tab=readme-ov-file#action-inputs
+      comment-id:
+        required: false
+        type: string
+      issue-number:
+        required: false
+        type: string
 
 jobs:
   build-biome:
-    name: Build Biome
+    name: Build Biome (${{ inputs.ref }})
     timeout-minutes: 45
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout Biome
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -56,6 +67,8 @@ jobs:
     needs: build-biome
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout ${{ matrix.repository }}
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -75,3 +88,72 @@ jobs:
       - name: Run command
         working-directory: ${{ matrix.path }}
         run: ${{ matrix.command }}
+
+reply:
+    name: Reply
+    if: ${{ inputs.issue-number && inputs.comment-id }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        with:
+          token: ${{ secrets.BIOME_PR_PAT }}
+          repository: biomejs/biome
+          issue-number: ${{ inputs.issue-number }}
+          comment-id: ${{ inputs.comment-id }}
+          reactions: eyes
+
+comment:
+    needs: test-ecosystem
+    if: ${{ inputs.issue-number && inputs.comment-id }}
+    runs-on: ubuntu-latest
+    name: Reply Comment
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        id: script
+        if: ${{ inputs.issue-number }}
+        with:
+          result-encoding: string
+          # Script from https://github.com/oxc-project/oxlint-ecosystem-ci/blob/main/.github/workflows/ecosystem-ci.yml
+          script: |
+            const {
+              data: { jobs },
+            } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+              per_page: 100,
+            });
+            let result = jobs
+              .filter((job) => job.name.startsWith("Test "))
+              .map((job) => {
+                const suite = job.name.slice(5);
+                return { suite, conclusion: job.conclusion, link: job.html_url };
+              });
+            const url = `${context.serverUrl}//${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const urlLink = `[Open](${url})`;
+            const conclusionEmoji = {
+              success: ":white_check_mark:",
+              failure: ":x:",
+              cancelled: ":stop_button:",
+            };
+            const body = `
+            ## [Oxlint Ecosystem CI](${urlLink})
+            | suite | result |
+            |-------|--------|
+            ${result.map((r) => `| [${r.suite}](${r.link}) | ${conclusionEmoji[r.conclusion]} |`).join("\n")}
+            `;
+            return body;
+
+      - uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        if: ${{ inputs.issue-number && inputs.comment-id }}
+        with:
+          token: ${{ secrets.BIOME_PR_PAT }}
+          repository: biomejs/biome
+          issue-number: ${{ inputs.issue-number }}
+          comment-id: ${{ inputs.comment-id }}
+          body: ${{ steps.script.outputs.result }}
+          edit-mode: replace
