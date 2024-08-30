@@ -55,76 +55,119 @@ jobs:
         include:
           # Add projects to test here
           # Supported fields:
+          # - id: identifier
           # - repository: GitHub repository to checkout
           # - ref: ref to checkout (default is the default branch)
           # - working-directory: where to execute `biome` (default is the root of the repository)
           #   The path is relative to the root of the repository
           # - arguments: extra arguments to pass to the `biome check` command (default is `.`)
-          - repository: ant-design/ant-design
-          - repository: withastro/astro
-          - repository: getsentry/sentry
-          - repository: preactjs/preact
-          - repository: saadeghi/daisyui
-          - repository: refinedev/refine
-          - repository: discordjs/discord.js
-          - repository: pulumi/pulumi
-            working-directory: sdk/nodejs/
-          - repository: HumanSignal/label-studio
-            working-directory: web/
-          - repository: plotly/plotly.js
-          - repository: fastapi/full-stack-fastapi-template
-            working-directory: frontend/
-          - repository: spicetify/cli
-          - repository: apify/crawlee
+          - id: ant-design
+            repository: ant-design/ant-design
+          - id: apify-crawlee
+            repository: apify/crawlee
             arguments: --organize-imports-enabled=false .
-          - repository: baidu/amis
+          - id: ariakit
+            repository: ariakit/ariakit
+          - id: astro
+            repository: withastro/astro
+          - id: baidu-amis
+            repository: baidu/amis
             working-directory: packages/office-viewer/
             arguments: --organize-imports-enabled=false .
-          - repository: steven-tey/novel
-            working-directory: apps/web/
-            arguments: --organize-imports-enabled=false .
-          - repository: steven-tey/novel
-            working-directory: packages/headless/
-          - repository: Unleash/unleash
-          - repository: tamagui/tamagui
-          - repository: runtipi/runtipi
-          - repository: voxel51/fiftyone
-            working-directory: app/packages/app/
-            arguments: ./src
-          - repository: voxel51/fiftyone
-            working-directory: app/packages/spotlight/
-            arguments: ./src
-          - repository: voxel51/fiftyone
-            working-directory: app/packages/looker-3d/
-            arguments: ./src
-          - repository: rescript-lang/rescript-compiler
-          - repository: adazzle/react-data-grid
-          - repository: webpro-nl/knip
-          - repository: wevm/wagmi
-          - repository: melonjs/melonJS
-          - repository: unjs/nitro
-          - repository: max-mapper/menubar
-          - repository: wojtekmaj/react-pdf
-            arguments: --organize-imports-enabled=false .
-          - repository: getsentry/sentry-javascript
-          - repository: askorama/orama
-            arguments: --organize-imports-enabled=false .
-          - repository: ariakit/ariakit
-          - repository: coder/coder
+          - id: coder
+            repository: coder/coder
             working-directory: site/
             arguments: e2e/ src/
-          - repository: google/mesop
-          - repository: openapi-ts/openapi-typescript
-            working-directory: packages/openapi-fetch/
-          - repository: openapi-ts/openapi-typescript
-            working-directory: packages/openapi-react-query/
-          - repository: openapi-ts/openapi-typescript
-            working-directory: packages/openapi-typescript-helpers/
-          - repository: fontsource/fontsource
+          - id: daisyui
+            repository: saadeghi/daisyui
+          - id: discordjs
+            repository: discordjs/discord.js
+          - id: FluidFramework
+            repository: microsoft/FluidFramework
+          - id: farm-fe
+            repository: farm-fe/farm
+          - id: fiftyone-app
+            repository: voxel51/fiftyone
+            working-directory: app/packages/app/
+            arguments: ./src
+          - id: fiftyone-looker-3d
+            repository: voxel51/fiftyone
+            working-directory: app/packages/looker-3d/
+            arguments: ./src
+          - id: fiftyone-spotlight
+            repository: voxel51/fiftyone
+            working-directory: app/packages/spotlight/
+            arguments: ./src
+          - id: fontsource
+            repository: fontsource/fontsource
             arguments: --organize-imports-enabled=false .
-          - repository: farm-fe/farm
-          - repository: microsoft/FluidFramework
-          - repository: web-infra-dev/rspack
+          - id: full-stack-fastapi-template
+            repository: fastapi/full-stack-fastapi-template
+            working-directory: frontend/
+          - id: google-mesop
+            repository: google/mesop
+          - id: knip
+            repository: webpro-nl/knip
+          - id: label-studio
+            repository: HumanSignal/label-studio
+            working-directory: web/
+          - id: max-mapper-menubar
+            repository: max-mapper/menubar
+          - id: melonJS
+            repository: melonjs/melonJS
+          - id: nitro
+            repository: unjs/nitro
+          - id: openapi-fetch
+            repository: openapi-ts/openapi-typescript
+            working-directory: packages/openapi-fetch/
+          - id: openapi-react-query
+            repository: openapi-ts/openapi-typescript
+            working-directory: packages/openapi-react-query/
+          - id: openapi-typescript-helpers
+            repository: openapi-ts/openapi-typescript
+            working-directory: packages/openapi-typescript-helpers/
+          - id: orama
+            repository: askorama/orama
+            arguments: --organize-imports-enabled=false .
+          - id: plotlyjs
+            repository: plotly/plotly.js
+          - id: pulumi
+            repository: pulumi/pulumi
+            working-directory: sdk/nodejs/
+          - id: preact
+            repository: preactjs/preact
+          - id: react-data-grid
+            repository: adazzle/react-data-grid
+          - id: react-pdf
+            repository: wojtekmaj/react-pdf
+            arguments: --organize-imports-enabled=false .
+          - id: refine
+            repository: refinedev/refine
+          - id: rescript-compiler
+            repository: rescript-lang/rescript-compiler
+          - id: rspack
+            repository: web-infra-dev/rspack
+          - id: runtipi
+            repository: runtipi/runtipi
+          - id: sentry
+            repository: getsentry/sentry
+          - id: sentry-javascript
+            repository: getsentry/sentry-javascript
+          - id: spicetify
+            repository: spicetify/cli
+          - id: steven-tey-novel-headless
+            repository: steven-tey/novel
+            working-directory: packages/headless/
+          - id: steven-tey-novel-web
+            repository: steven-tey/novel
+            working-directory: apps/web/
+            arguments: --organize-imports-enabled=false .
+          - id: tamagui
+            repository: tamagui/tamagui
+          - id: unleash
+            repository: Unleash/unleash
+          - id: wagmi
+            repository: wevm/wagmi
 
     name: Test ${{ matrix.repository }} ${{ matrix.working-directory }}
     needs: build-biome
@@ -145,6 +188,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           repository: ${{ matrix.repository }}
+          sparse-checkout: ${{ matrix.working-directory }}
           ref: ${{ matrix.ref }}
           path: repository
 
@@ -155,16 +199,42 @@ jobs:
           biome check --error-on-warnings --max-diagnostics=250 ${{ matrix.arguments || '.' }}
 
       - name: Test summary
-        if: ${{ failure() }}
+        if: ${{ ! cancelled() }}
         working-directory: repository/${{ matrix.working-directory }}
-        run: >-
-          biome check --error-on-warnings --reporter=summary ${{ matrix.arguments || '.' }}
+        run: >
+          biome check --reporter=summary ${{ matrix.arguments || '.' }} 2> /dev/null
+          | tee "$GITHUB_WORKSPACE/biome-summary.txt";
+
+      - name: Test summary hash
+        if: ${{ ! cancelled() }}
+        # Remove the last 3 lines which contain information that may change between runs.
+        # Also, sort lines to ensure consistent hashing
+        run: |
+          cat biome-summary.txt | head -n -3 | sort | sha1sum | tee biome-summary-sha1.txt
+
+      - name: Upload Biome summary hash
+        # Don't save the summary if the biome binary was not built on main.
+        if: ${{ ! cancelled() && (! inputs.biome-ref || inputs.biome-ref == 'main')  }}
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        with:
+          if-no-files-found: error
+          retention-days: 10
+          name: biome-summary-sha1-${{ matrix.id }}
+          path: biome-summary-sha1.txt
+
+      - name: Download previous Biome summary
+        if: ${{ ! cancelled() }}
+        uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11 # v6.0.0
+        with:
+          workflow_conclusion: completed
+          if_no_artifact_found: warn
+          name: biome-summary-sha1-${{ matrix.id }}
+          path: downloads/
 
       # Steps to notify Discord
       - name: Notification tag
         if: ${{ always() }}
         id: notification
-        working-directory: repository/${{ matrix.working-directory }}
         run: |
           if ${{ steps.test.outcome == 'success' }}; then
             TAG='✅'
@@ -172,6 +242,9 @@ jobs:
             TAG='❌'
           else
             TAG='❓'
+          fi
+          if ! test -e downloads/biome-summary-sha1.txt || ! diff downloads/biome-summary-sha1.txt biome-summary-sha1.txt > /dev/null; then
+            TAG="$TAG 🆕"
           fi
           echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
 
