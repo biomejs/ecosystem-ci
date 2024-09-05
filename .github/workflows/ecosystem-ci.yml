@@ -196,7 +196,7 @@ jobs:
         id: test
         working-directory: repository/${{ matrix.working-directory }}
         run: |
-          biome check --error-on-warnings --max-diagnostics=250 ${{ matrix.arguments || '.' }}
+          biome check --error-on-warnings --max-diagnostics=1000 ${{ matrix.arguments || '.' }}
 
       - name: Test summary
         if: ${{ ! cancelled() }}
@@ -205,34 +205,29 @@ jobs:
           biome check --reporter=summary ${{ matrix.arguments || '.' }} 2> /dev/null
           | tee "$GITHUB_WORKSPACE/biome-summary.txt";
 
-      - name: Test summary hash
-        if: ${{ ! cancelled() }}
-        # Remove the last 3 lines which contain information that may change between runs.
-        # Also, sort lines to ensure consistent hashing
-        run: |
-          cat biome-summary.txt | head -n -3 | sort | sha1sum | tee biome-summary-sha1.txt
-
-      - name: Upload Biome summary hash
+      - name: Upload Biome summary
         # Don't save the summary if the biome binary was not built on main.
         if: ${{ ! cancelled() && (! inputs.biome-ref || inputs.biome-ref == 'main')  }}
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           if-no-files-found: error
           retention-days: 10
-          name: biome-summary-sha1-${{ matrix.id }}
-          path: biome-summary-sha1.txt
+          name: biome-summary-${{ matrix.id }}
+          path: biome-summary.txt
 
       - name: Download previous Biome summary
         if: ${{ ! cancelled() }}
         uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11 # v6.0.0
         with:
           workflow_conclusion: completed
+          # Find the most recent workflow run with an artifact with the given `name`
+          search_artifacts: true
           if_no_artifact_found: warn
-          name: biome-summary-sha1-${{ matrix.id }}
+          name: biome-summary-${{ matrix.id }}
           path: downloads/
 
       # Steps to notify Discord
-      - name: Notification tag
+      - name: Notification tag and Biome summary diff
         if: ${{ always() }}
         id: notification
         run: |
@@ -243,10 +238,22 @@ jobs:
           else
             TAG='❓'
           fi
-          if ! test -e downloads/biome-summary-sha1.txt || ! diff downloads/biome-summary-sha1.txt biome-summary-sha1.txt > /dev/null; then
+          if ! test -e downloads/biome-summary.txt || ! test -e biome-summary.txt; then
             TAG="$TAG 🆕"
+          elif ! diff --color=auto --minimal --unified=1000 --ignore-matching-line='^Checked' --ignore-all-space downloads/biome-summary.txt biome-summary.txt; then
+            if test "$(wc -l < downloads/biome-summary.txt)" -le "$(wc -l < biome-summary.txt)"; then
+              TAG="$TAG 📈"
+            else
+              TAG="$TAG 📉"
+            fi
+          fi
+          if test -e biome-summary.txt; then
+            TIME="$(sed -En 's/^Checked.*in ([0-9]+m?s).*/\1/p' < biome-summary.txt)"
+          else
+            TIME='?'
           fi
           echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
+          echo "TIME=$TIME" >> "$GITHUB_OUTPUT"
 
       - name: Notify Discord
         if: ${{ always() && steps.notification.outputs.TAG }}
@@ -256,4 +263,5 @@ jobs:
           content: "${{ steps.notification.outputs.TAG }}	\
             biome(**${{ inputs.biome-ref || 'main' }}**)	\
             **${{ matrix.repository }}**/${{ matrix.working-directory }}	\
+            ${{ steps.notification.outputs.TIME }}	\
             [action](<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>)"
