@@ -16,7 +16,7 @@ on:
 
 jobs:
   build-biome:
-    name: Build Biome (${{ inputs.biome-ref }})
+    name: Build Biome (${{ inputs.biome-ref || 'main' }})
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
@@ -169,7 +169,7 @@ jobs:
           - id: wagmi
             repository: wevm/wagmi
 
-    name: Test ${{ matrix.repository }} ${{ matrix.working-directory }}
+    name: Test ${{ matrix.id }}
     needs: build-biome
     timeout-minutes: 5
     runs-on: ubuntu-latest
@@ -262,6 +262,6 @@ jobs:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           content: "${{ steps.notification.outputs.TAG }}	\
             biome(**${{ inputs.biome-ref || 'main' }}**)	\
-            **${{ matrix.repository }}**/${{ matrix.working-directory }}	\
+            **${{ matrix.id }}** \
             ${{ steps.notification.outputs.TIME }}	\
             [action](<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>)"
