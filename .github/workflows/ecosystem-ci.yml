@@ -35,7 +35,8 @@ jobs:
       - name: Build Biome binary
         env:
           # We set `BIOME_VERSION` to disable the recommended rules from the nursery group
-          BIOME_VERSION: 0.0.0
+          # The version needs to be different from 0.0.0
+          BIOME_VERSION: 0.0.1
           RUSTFLAGS: -C debug-assertions
         run: |
           cargo build --bin biome --release

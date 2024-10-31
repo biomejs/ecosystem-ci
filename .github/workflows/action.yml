@@ -1,0 +1,5 @@
+name: Biome ecosystem CI
+
+on:
+  schedule:
+    - cron: "0 */3 * * *" # Every 3 hours.
