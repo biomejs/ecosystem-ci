@@ -193,7 +193,13 @@ jobs:
           ref: ${{ matrix.ref }}
           path: repository
 
+      - name: Migrate
+        working-directory: repository/${{ matrix.working-directory }}
+        run: |
+          biome migrate --write
+
       - name: Test details
+        if: ${{ ! cancelled() }}
         id: test
         working-directory: repository/${{ matrix.working-directory }}
         run: |
