@@ -66,7 +66,7 @@ jobs:
             repository: ant-design/ant-design
           - id: apify-crawlee
             repository: apify/crawlee
-            arguments: --organize-imports-enabled=false .
+            arguments: --assist-enabled=false .
           - id: ariakit
             repository: ariakit/ariakit
           - id: astro
@@ -74,7 +74,7 @@ jobs:
           - id: baidu-amis
             repository: baidu/amis
             working-directory: packages/office-viewer/
-            arguments: --organize-imports-enabled=false .
+            arguments: --assist-enabled=false .
           - id: coder
             repository: coder/coder
             working-directory: site/
@@ -101,7 +101,7 @@ jobs:
             arguments: ./src
           - id: fontsource
             repository: fontsource/fontsource
-            arguments: --organize-imports-enabled=false .
+            arguments: --assist-enabled=false .
           - id: full-stack-fastapi-template
             repository: fastapi/full-stack-fastapi-template
             working-directory: frontend/
@@ -129,7 +129,7 @@ jobs:
             working-directory: packages/openapi-typescript-helpers/
           - id: orama
             repository: askorama/orama
-            arguments: --organize-imports-enabled=false .
+            arguments: --assist-enabled=false .
           - id: plotlyjs
             repository: plotly/plotly.js
           - id: pulumi
@@ -141,7 +141,7 @@ jobs:
             repository: adazzle/react-data-grid
           - id: react-pdf
             repository: wojtekmaj/react-pdf
-            arguments: --organize-imports-enabled=false .
+            arguments: --assist-enabled=false .
           - id: refine
             repository: refinedev/refine
           - id: rescript-compiler
@@ -162,7 +162,7 @@ jobs:
           - id: steven-tey-novel-web
             repository: steven-tey/novel
             working-directory: apps/web/
-            arguments: --organize-imports-enabled=false .
+            arguments: --assist-enabled=false .
           - id: tamagui
             repository: tamagui/tamagui
           - id: unleash
