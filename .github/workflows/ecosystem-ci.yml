@@ -150,10 +150,6 @@ jobs:
             repository: web-infra-dev/rspack
           - id: runtipi
             repository: runtipi/runtipi
-          - id: sentry
-            repository: getsentry/sentry
-          - id: sentry-javascript
-            repository: getsentry/sentry-javascript
           - id: spicetify
             repository: spicetify/cli
           - id: steven-tey-novel-headless
