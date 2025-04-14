@@ -18,7 +18,7 @@ jobs:
   build-biome:
     name: Build Biome (${{ inputs.biome-ref || 'main' }})
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-arm-16
     steps:
       - name: Checkout Biome
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -169,7 +169,7 @@ jobs:
     name: Test ${{ matrix.id }}
     needs: build-biome
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-arm-16
     steps:
       - name: Download Biome binary
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
