@@ -260,7 +260,8 @@ jobs:
           search_artifacts: true
           if_no_artifact_found: warn
           name_is_regexp: true
-          name: biome-report-.*
+          # exclude tamagui because its download fails
+          name: biome-report-(?!tamagui$).*
           path: previous-reports/
 
       - name: Aggregate results
