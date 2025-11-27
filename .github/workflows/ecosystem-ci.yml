@@ -206,13 +206,31 @@ jobs:
 
       - name: Upload Biome report
         # Don't save the report if the biome binary was not built on main.
-        if: ${{ always() && (! inputs.biome-ref || inputs.biome-ref == 'main')  }}
+        if: ${{ (! inputs.biome-ref || inputs.biome-ref == 'main')  }}
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           if-no-files-found: error
           retention-days: 10
           name: biome-report-${{ matrix.id }}
           path: biome-report.json
+
+      - name: Save outcome JSON
+        run: |
+          cat > outcome.json <<EOF
+          {
+            "id": "${{ matrix.id }}",
+            "outcome": "${{ steps.test.outcome }}"
+          }
+          EOF
+
+      - name: Upload outcome
+        if: ${{ always() }}
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        with:
+          if-no-files-found: error
+          retention-days: 1
+          name: outcome-${{ matrix.id }}
+          path: outcome.json
 
   notify-discord:
     name: Notify Discord
