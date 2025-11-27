@@ -197,8 +197,8 @@ jobs:
         if: ${{ ! cancelled() }}
         working-directory: repository/${{ matrix.working-directory }}
         run: >
-          biome check --reporter=json ${{ matrix.arguments || '.' }} 2>&1
-          | tee "$GITHUB_WORKSPACE/biome-report.json";
+          biome check --reporter=json --max-diagnostics=0 ${{ matrix.arguments || '.' }} 2>/dev/null
+          | tee "$GITHUB_WORKSPACE/biome-report.json" || true;
 
       - name: Upload Biome report
         # Don't save the report if the biome binary was not built on main.

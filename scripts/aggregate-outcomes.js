@@ -263,8 +263,19 @@ function readReport(reportsDir, projectId) {
 	);
 
 	if (fs.existsSync(reportPath)) {
-		const content = fs.readFileSync(reportPath, "utf-8");
-		return JSON.parse(content);
+		try {
+			const content = fs.readFileSync(reportPath, "utf-8");
+			return JSON.parse(content);
+		} catch (error) {
+			console.error(
+				`Warning: Failed to parse JSON report for ${projectId}: ${error.message}`,
+			);
+			console.error(`Report path: ${reportPath}`);
+			console.error(
+				`Content preview: ${content.substring(0, 200)}...`,
+			);
+			return null;
+		}
 	}
 
 	return null;
