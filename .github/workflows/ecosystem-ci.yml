@@ -236,7 +236,8 @@ jobs:
   notify-discord:
     name: Notify Discord
     needs: test-ecosystem
-    if: ${{ always() }}
+    # temporary skip
+    if: false
     runs-on: depot-ubuntu-24.04-arm-16
     steps:
       - name: Checkout repository
