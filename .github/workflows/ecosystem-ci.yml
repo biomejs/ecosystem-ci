@@ -150,8 +150,6 @@ jobs:
             repository: steven-tey/novel
             working-directory: apps/web/
             arguments: --assist-enabled=false .
-          - id: tamagui
-            repository: tamagui/tamagui
           - id: unleash
             repository: Unleash/unleash
           - id: wagmi
