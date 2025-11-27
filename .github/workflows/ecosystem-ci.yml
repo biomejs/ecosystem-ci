@@ -79,8 +79,6 @@ jobs:
             repository: coder/coder
             working-directory: site/
             arguments: e2e/ src/
-          - id: daisyui
-            repository: saadeghi/daisyui
           - id: discordjs
             repository: discordjs/discord.js
           - id: FluidFramework
@@ -116,8 +114,6 @@ jobs:
             repository: max-mapper/menubar
           - id: melonJS
             repository: melonjs/melonJS
-          - id: nitro
-            repository: unjs/nitro
           - id: openapi-fetch
             repository: openapi-ts/openapi-typescript
             working-directory: packages/openapi-fetch/
@@ -197,62 +193,22 @@ jobs:
         run: |
           biome check --error-on-warnings --max-diagnostics=1000 ${{ matrix.arguments || '.' }}
 
-      - name: Test summary
+      - name: Generate JSON report
         if: ${{ ! cancelled() }}
         working-directory: repository/${{ matrix.working-directory }}
         run: >
-          biome check --reporter=summary ${{ matrix.arguments || '.' }} 2> /dev/null
-          | tee "$GITHUB_WORKSPACE/biome-summary.txt";
+          biome check --reporter=json ${{ matrix.arguments || '.' }} 2>&1
+          | tee "$GITHUB_WORKSPACE/biome-report.json";
 
-      - name: Upload Biome summary
-        # Don't save the summary if the biome binary was not built on main.
-        if: ${{ ! cancelled() && (! inputs.biome-ref || inputs.biome-ref == 'main')  }}
+      - name: Upload Biome report
+        # Don't save the report if the biome binary was not built on main.
+        if: ${{ always() && (! inputs.biome-ref || inputs.biome-ref == 'main')  }}
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           if-no-files-found: error
           retention-days: 10
-          name: biome-summary-${{ matrix.id }}
-          path: biome-summary.txt
-
-      - name: Download previous Biome summary
-        if: ${{ ! cancelled() }}
-        uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11 # v6.0.0
-        with:
-          workflow_conclusion: completed
-          # Find the most recent workflow run with an artifact with the given `name`
-          search_artifacts: true
-          if_no_artifact_found: warn
-          name: biome-summary-${{ matrix.id }}
-          path: downloads/
-
-      # Steps to collect outcome data
-      - name: Compute outcome data
-        if: ${{ always() }}
-        id: outcome
-        run: |
-          if ${{ steps.test.outcome == 'success' }}; then
-            TAG='✅'
-          elif ${{ steps.test.outcome == 'failure' }}; then
-            TAG='❌'
-          else
-            TAG='❓'
-          fi
-          if ! test -e downloads/biome-summary.txt || ! test -e biome-summary.txt; then
-            TAG="$TAG 🆕"
-          elif ! diff --color=auto --minimal --unified=1000 --ignore-matching-line='^Checked' --ignore-all-space downloads/biome-summary.txt biome-summary.txt; then
-            if test "$(wc -l < downloads/biome-summary.txt)" -le "$(wc -l < biome-summary.txt)"; then
-              TAG="$TAG 📈"
-            else
-              TAG="$TAG 📉"
-            fi
-          fi
-          if test -e biome-summary.txt; then
-            TIME="$(sed -En 's/^Checked.*in ([0-9]+m?s).*/\1/p' < biome-summary.txt)"
-          else
-            TIME='?'
-          fi
-          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
-          echo "TIME=$TIME" >> "$GITHUB_OUTPUT"
+          name: biome-report-${{ matrix.id }}
+          path: biome-report.json
 
       - name: Save outcome JSON
         if: ${{ always() }}
@@ -260,8 +216,6 @@ jobs:
           cat > outcome.json <<EOF
           {
             "id": "${{ matrix.id }}",
-            "tag": "${{ steps.outcome.outputs.TAG }}",
-            "time": "${{ steps.outcome.outputs.TIME }}",
             "outcome": "${{ steps.test.outcome }}"
           }
           EOF
@@ -295,11 +249,29 @@ jobs:
           pattern: outcome-*
           path: outcomes/
 
+      - name: Download all biome report artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          pattern: biome-report-*
+          path: reports/
+
+      - name: Download previous biome report artifacts
+        uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11 # v6.0.0
+        with:
+          workflow_conclusion: completed
+          search_artifacts: true
+          if_no_artifact_found: warn
+          name_is_regexp: true
+          name: biome-report-.*
+          path: previous-reports/
+
       - name: Aggregate results
         id: aggregate
         run: |
           MESSAGE=$(node scripts/aggregate-outcomes.js \
             --outcomes-dir outcomes \
+            --reports-dir reports \
+            --previous-reports-dir previous-reports \
             --biome-ref "${{ inputs.biome-ref || 'main' }}" \
             --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
 
