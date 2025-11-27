@@ -265,7 +265,14 @@ function readReport(reportsDir, projectId) {
 	if (fs.existsSync(reportPath)) {
 		try {
 			const content = fs.readFileSync(reportPath, "utf-8");
-			return JSON.parse(content);
+			const report = JSON.parse(content);
+
+			// Check if this is an error placeholder
+			if (report.error === true) {
+				return { error: true };
+			}
+
+			return report;
 		} catch (error) {
 			console.error(
 				`Warning: Failed to parse JSON report for ${projectId}: ${error.message}`,
@@ -316,11 +323,17 @@ function getTotalDiagnostics(report) {
  * Compare two reports and determine trend indicator
  * @param {BiomeReport | null} previousReport - Previous report
  * @param {BiomeReport | null} currentReport - Current report
- * @returns {string} - Trend indicator: "🆕" | "📈" | "📉" | ""
+ * @returns {string} - Trend indicator: "🆕" | "📈" | "📉" | "⚠️" | ""
  */
 function computeTrend(previousReport, currentReport) {
+	// Error in current run
+	if (currentReport?.error) {
+		return "⚠️";
+	}
+
 	// New project (no previous report or no current report)
-	if (!previousReport || !currentReport) {
+	// Also treat as new if previous report had an error
+	if (!previousReport || !currentReport || previousReport.error) {
 		return "🆕";
 	}
 
@@ -377,9 +390,11 @@ function computeFullOutcome(
 	// Compute components
 	const baseTag = computeBaseTag(outcome);
 	const trend = computeTrend(previousReport, currentReport);
-	const time = currentReport
-		? formatDuration(currentReport.summary?.duration)
-		: "?";
+	const time = currentReport?.error
+		? "Error while running Biome"
+		: currentReport
+			? formatDuration(currentReport.summary?.duration)
+			: "?";
 
 	// Build full tag
 	const tag = trend ? `${baseTag} ${trend}` : baseTag;
