@@ -206,13 +206,13 @@ jobs:
 
       - name: Upload Biome report
         # Don't save the report if the biome binary was not built on main.
-        if: ${{ (! inputs.biome-ref || inputs.biome-ref == 'main')  }}
+        if: ${{ always() && (! inputs.biome-ref || inputs.biome-ref == 'main')  }}
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           if-no-files-found: error
           retention-days: 10
           name: biome-report-${{ matrix.id }}
-          path: biome-report.json
+          path: ${{ github.workspace }}/biome-report.json
 
       - name: Save outcome JSON
         run: |
