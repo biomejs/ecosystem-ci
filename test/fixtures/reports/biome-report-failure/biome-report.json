@@ -1,0 +1,11 @@
+{
+  "summary": {
+    "duration": {
+      "secs": 2,
+      "nanos": 750000000
+    },
+    "errors": 15,
+    "warnings": 8,
+    "infos": 2
+  }
+}

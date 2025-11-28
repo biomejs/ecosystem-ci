@@ -1,3 +1,6 @@
 {
-  "type": "module"
+	"type": "module",
+	"scripts": {
+		"test": "node --experimental-strip-types --test test/aggregate-outcomes.test.ts"
+	}
 }

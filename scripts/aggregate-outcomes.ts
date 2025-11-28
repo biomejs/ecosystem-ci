@@ -8,7 +8,7 @@
  *
  * @example
  * # Full usage with reports
- * node scripts/aggregate-outcomes.js \
+ * node --experimental-strip-types scripts/aggregate-outcomes.ts \
  *   --outcomes-dir ./outcomes \
  *   --reports-dir ./reports \
  *   --previous-reports-dir ./previous-reports \
@@ -17,7 +17,7 @@
  *
  * @example
  * # Using short flags
- * node scripts/aggregate-outcomes.js \
+ * node --experimental-strip-types scripts/aggregate-outcomes.ts \
  *   -o ./outcomes \
  *   -r ./reports \
  *   -p ./previous-reports \
@@ -26,7 +26,7 @@
  *
  * @example
  * # Minimal usage (no trends)
- * node scripts/aggregate-outcomes.js -o ./outcomes -r ./reports
+ * node --experimental-strip-types scripts/aggregate-outcomes.ts -o ./outcomes -r ./reports
  */
 
 import fs from "node:fs";
@@ -35,40 +35,81 @@ import { parseArgs } from "node:util";
 
 /**
  * Minimal outcome data from matrix jobs
- *
- * @typedef {Object} MinimalOutcome
- * @property {string} id - Project identifier (e.g., "ant-design")
- * @property {string} outcome - Test outcome: "success" | "failure" | "skipped" | other
  */
+export interface MinimalOutcome {
+	/** Project identifier (e.g., "ant-design") */
+	id: string;
+	/** Test outcome: "success" | "failure" | "skipped" | other */
+	outcome: string;
+}
+
+/**
+ * Duration object from Biome JSON report
+ */
+export interface Duration {
+	/** Seconds */
+	secs: number;
+	/** Nanoseconds */
+	nanos: number;
+}
+
+/**
+ * Summary statistics from Biome JSON report
+ */
+export interface BiomeSummary {
+	/** Execution duration */
+	duration?: Duration;
+	/** Number of errors */
+	errors?: number;
+	/** Number of warnings */
+	warnings?: number;
+	/** Number of info diagnostics */
+	infos?: number;
+}
 
 /**
  * Biome JSON report structure
- *
- * @typedef {Object} BiomeReport
- * @property {Object} summary - Summary statistics
- * @property {Object} summary.duration - Execution duration
- * @property {number} summary.duration.secs - Seconds
- * @property {number} summary.duration.nanos - Nanoseconds
- * @property {number} summary.errors - Number of errors
- * @property {number} summary.warnings - Number of warnings
- * @property {number} summary.infos - Number of info diagnostics
  */
+export interface BiomeReport {
+	/** Summary statistics */
+	summary?: BiomeSummary;
+	/** Error flag (set when report generation failed) */
+	error?: boolean;
+}
 
 /**
  * Full outcome data with computed trends
- *
- * @typedef {Object} OutcomeData
- * @property {string} id - Project identifier (e.g., "ant-design")
- * @property {string} tag - Status emoji with indicators:
- *   - "✅" = success
- *   - "❌" = failure
- *   - "❓" = skipped/timeout/other
- *   - "🆕" = new project (appended to base emoji)
- *   - "📈" = more diagnostics than before (appended)
- *   - "📉" = fewer diagnostics than before (appended)
- * @property {string} time - Execution time (e.g., "1.2s", "30ms", "?")
- * @property {string} outcome - Test outcome: "success" | "failure" | "skipped" | other
  */
+export interface OutcomeData {
+	/** Project identifier (e.g., "ant-design") */
+	id: string;
+	/**
+	 * Status emoji with indicators:
+	 * - "✅" = success
+	 * - "❌" = failure
+	 * - "❓" = skipped/timeout/other
+	 * - "🆕" = new project (appended to base emoji)
+	 * - "📈" = more diagnostics than before (appended)
+	 * - "📉" = fewer diagnostics than before (appended)
+	 * - "⚠️" = error running biome (appended)
+	 */
+	tag: string;
+	/** Execution time (e.g., "1.2s", "30ms", "?") */
+	time: string;
+	/** Test outcome: "success" | "failure" | "skipped" | other */
+	outcome: string;
+}
+
+/**
+ * Configuration from CLI arguments
+ */
+export interface Config {
+	outcomesDir: string;
+	reportsDir: string;
+	previousReportsDir?: string;
+	biomeRef?: string;
+	runUrl?: string;
+}
 
 /*
  * Example JSON data structure that the script expects to receive:
@@ -109,9 +150,9 @@ import { parseArgs } from "node:util";
 /**
  * Display usage information
  */
-function showHelp() {
+export function showHelp(): void {
 	console.info(`
-Usage: aggregate-outcomes.js [options]
+Usage: aggregate-outcomes.ts [options]
 
 Aggregates Biome ecosystem CI outcome data, computes trends from JSON reports,
 and generates a Discord message.
@@ -126,7 +167,7 @@ Options:
 
 Examples:
   # Full usage with trend computation
-  node scripts/aggregate-outcomes.js \\
+  node --experimental-strip-types scripts/aggregate-outcomes.ts \\
     --outcomes-dir ./outcomes \\
     --reports-dir ./reports \\
     --previous-reports-dir ./previous-reports \\
@@ -134,10 +175,10 @@ Examples:
     --run-url "https://github.com/biomejs/ecosystem-ci/actions/runs/123456"
 
   # Using short flags
-  node scripts/aggregate-outcomes.js -o ./outcomes -r ./reports -p ./prev -b main -u "https://..."
+  node --experimental-strip-types scripts/aggregate-outcomes.ts -o ./outcomes -r ./reports -p ./prev -b main -u "https://..."
 
   # Without trends (no previous reports)
-  node scripts/aggregate-outcomes.js -o ./outcomes -r ./reports
+  node --experimental-strip-types scripts/aggregate-outcomes.ts -o ./outcomes -r ./reports
 
 Expected Directory Structure:
   outcomes/
@@ -161,9 +202,8 @@ Output:
 
 /**
  * Parse command line arguments using Node.js util.parseArgs
- * @returns {{outcomesDir: string, reportsDir: string, previousReportsDir?: string, biomeRef?: string, runUrl?: string}}
  */
-function parseCliArgs() {
+export function parseCliArgs(): Config {
 	const { values } = parseArgs({
 		options: {
 			"outcomes-dir": {
@@ -221,11 +261,9 @@ function parseCliArgs() {
 
 /**
  * Read all minimal outcome JSON files from the outcomes directory
- * @param {string} outcomesDir - Path to directory containing outcome-* subdirectories
- * @returns {MinimalOutcome[]}
  */
-function readMinimalOutcomes(outcomesDir) {
-	const outcomes = [];
+export function readMinimalOutcomes(outcomesDir: string): MinimalOutcome[] {
+	const outcomes: MinimalOutcome[] = [];
 
 	try {
 		const entries = fs.readdirSync(outcomesDir);
@@ -237,12 +275,15 @@ function readMinimalOutcomes(outcomesDir) {
 
 			if (fs.existsSync(outcomeFile)) {
 				const content = fs.readFileSync(outcomeFile, "utf-8");
-				const data = JSON.parse(content);
+				const data = JSON.parse(content) as MinimalOutcome;
 				outcomes.push(data);
 			}
 		}
 	} catch (error) {
-		console.error(`Error reading outcomes from ${outcomesDir}:`, error.message);
+		console.error(
+			`Error reading outcomes from ${outcomesDir}:`,
+			(error as Error).message,
+		);
 		process.exit(1);
 	}
 
@@ -251,11 +292,11 @@ function readMinimalOutcomes(outcomesDir) {
 
 /**
  * Read a biome JSON report file
- * @param {string} reportsDir - Directory containing biome-report-* subdirectories
- * @param {string} projectId - Project identifier
- * @returns {BiomeReport | null} - Parsed report or null if not found
  */
-function readReport(reportsDir, projectId) {
+export function readReport(
+	reportsDir: string,
+	projectId: string,
+): BiomeReport | null {
 	const reportPath = path.join(
 		reportsDir,
 		`biome-report-${projectId}`,
@@ -265,7 +306,7 @@ function readReport(reportsDir, projectId) {
 	if (fs.existsSync(reportPath)) {
 		try {
 			const content = fs.readFileSync(reportPath, "utf-8");
-			const report = JSON.parse(content);
+			const report = JSON.parse(content) as BiomeReport;
 
 			// Check if this is an error placeholder
 			if (report.error === true) {
@@ -275,12 +316,9 @@ function readReport(reportsDir, projectId) {
 			return report;
 		} catch (error) {
 			console.error(
-				`Warning: Failed to parse JSON report for ${projectId}: ${error.message}`,
+				`Warning: Failed to parse JSON report for ${projectId}: ${(error as Error).message}`,
 			);
 			console.error(`Report path: ${reportPath}`);
-			console.error(
-				`Content preview: ${content.substring(0, 200)}...`,
-			);
 			return null;
 		}
 	}
@@ -290,10 +328,8 @@ function readReport(reportsDir, projectId) {
 
 /**
  * Format duration from biome report
- * @param {Object} duration - Duration object with secs and nanos
- * @returns {string} - Formatted duration (e.g., "1.2s", "234ms")
  */
-function formatDuration(duration) {
+export function formatDuration(duration: Duration | undefined): string {
 	if (!duration) return "?";
 
 	const totalMs = duration.secs * 1000 + duration.nanos / 1000000;
@@ -307,10 +343,8 @@ function formatDuration(duration) {
 
 /**
  * Get total diagnostic count from report
- * @param {BiomeReport} report - Biome report
- * @returns {number} - Total number of diagnostics
  */
-function getTotalDiagnostics(report) {
+export function getTotalDiagnostics(report: BiomeReport | null): number {
 	if (!report || !report.summary) return 0;
 	return (
 		(report.summary.errors || 0) +
@@ -321,11 +355,11 @@ function getTotalDiagnostics(report) {
 
 /**
  * Compare two reports and determine trend indicator
- * @param {BiomeReport | null} previousReport - Previous report
- * @param {BiomeReport | null} currentReport - Current report
- * @returns {string} - Trend indicator: "🆕" | "📈" | "📉" | "⚠️" | ""
  */
-function computeTrend(previousReport, currentReport) {
+export function computeTrend(
+	previousReport: BiomeReport | null,
+	currentReport: BiomeReport | null,
+): string {
 	// Error in current run
 	if (currentReport?.error) {
 		return "⚠️";
@@ -354,10 +388,8 @@ function computeTrend(previousReport, currentReport) {
 
 /**
  * Compute base tag from test outcome
- * @param {string} outcome - Test outcome: "success" | "failure" | other
- * @returns {string} - Base tag emoji
  */
-function computeBaseTag(outcome) {
+export function computeBaseTag(outcome: string): string {
 	if (outcome === "success") {
 		return "✅";
 	}
@@ -369,16 +401,12 @@ function computeBaseTag(outcome) {
 
 /**
  * Compute full outcome data with trends
- * @param {MinimalOutcome} minimalOutcome - Minimal outcome from matrix job
- * @param {string} reportsDir - Directory with current reports
- * @param {string | undefined} previousReportsDir - Directory with previous reports (optional)
- * @returns {OutcomeData} - Full outcome with computed tag, time, and trends
  */
-function computeFullOutcome(
-	minimalOutcome,
-	reportsDir,
-	previousReportsDir,
-) {
+export function computeFullOutcome(
+	minimalOutcome: MinimalOutcome,
+	reportsDir: string,
+	previousReportsDir?: string,
+): OutcomeData {
 	const { id, outcome } = minimalOutcome;
 
 	// Read reports
@@ -409,12 +437,12 @@ function computeFullOutcome(
 
 /**
  * Aggregate outcomes and generate Discord message
- * @param {OutcomeData[]} outcomes - Array of outcome data
- * @param {string | undefined} biomeRef - Biome reference (branch/tag), optional
- * @param {string | undefined} runUrl - GitHub Actions run URL, optional
- * @returns {string} - Formatted Discord message
  */
-function aggregateResults(outcomes, biomeRef, runUrl) {
+export function aggregateResults(
+	outcomes: OutcomeData[],
+	biomeRef?: string,
+	runUrl?: string,
+): string {
 	// Sort outcomes by id for consistent ordering
 	outcomes.sort((a, b) => a.id.localeCompare(b.id));
 
@@ -439,7 +467,7 @@ function aggregateResults(outcomes, biomeRef, runUrl) {
 	const total = outcomes.length;
 
 	// Build the message parts
-	const messageParts = [];
+	const messageParts: string[] = [];
 
 	// Add header with optional biome ref
 	if (biomeRef) {
@@ -468,7 +496,7 @@ function aggregateResults(outcomes, biomeRef, runUrl) {
 /**
  * Main function
  */
-function main() {
+export function main(): void {
 	const config = parseCliArgs();
 
 	// Read minimal outcomes
@@ -496,5 +524,3 @@ function main() {
 	);
 	console.info(message);
 }
-
-main();

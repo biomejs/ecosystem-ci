@@ -271,7 +271,7 @@ jobs:
       - name: Aggregate results
         id: aggregate
         run: |
-          MESSAGE=$(node scripts/aggregate-outcomes.js \
+          MESSAGE=$(node --experimental-strip-types scripts/index.ts \
             --outcomes-dir outcomes \
             --reports-dir reports \
             --previous-reports-dir previous-reports \
