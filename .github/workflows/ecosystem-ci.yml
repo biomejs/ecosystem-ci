@@ -181,20 +181,22 @@ jobs:
         run: |
           biome migrate --write
 
-      - name: Test details
+      - name: Run Biome check and generate report
         if: ${{ ! cancelled() }}
         id: test
-        continue-on-error: true
         working-directory: repository/${{ matrix.working-directory }}
         run: |
-          biome check --error-on-warnings --max-diagnostics=1000 ${{ matrix.arguments || '.' }}
-
-      - name: Generate JSON report
-        if: ${{ ! cancelled() }}
-        working-directory: repository/${{ matrix.working-directory }}
-        run: |
-          biome check --reporter=json --reporter-file="$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json" ${{ matrix.arguments || '.' }} || \
+          # Run biome check with JSON reporter, capture exit code but always succeed
+          if biome check --error-on-warnings --max-diagnostics=1000 --reporter=json --reporter-file="$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json" ${{ matrix.arguments || '.' }}; then
+            echo "outcome=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=failure" >> "$GITHUB_OUTPUT"
+          fi
+          
+          # If the report file doesn't exist or is empty, create error placeholder
+          if [ ! -f "$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json" ] || [ ! -s "$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json" ]; then
             echo '{"error": true}' > "$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json"
+          fi
 
       - name: Upload Biome report
         # Don't save the report if the biome binary was not built on main.
@@ -208,7 +210,7 @@ jobs:
 
       - name: Save outcome JSON
         run: |
-          echo '{"id": "${{ matrix.id }}", "outcome": "${{ steps.test.outcome }}"}' > "$GITHUB_WORKSPACE/outcome-${{ matrix.id }}.json"
+          echo '{"id": "${{ matrix.id }}", "outcome": "${{ steps.test.outputs.outcome }}"}' > "$GITHUB_WORKSPACE/outcome-${{ matrix.id }}.json"
 
       - name: Upload outcome
         if: ${{ always() }}
