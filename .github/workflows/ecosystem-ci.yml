@@ -105,8 +105,6 @@ jobs:
             working-directory: frontend/
           - id: google-mesop
             repository: google/mesop
-          - id: knip
-            repository: webpro-nl/knip
           - id: label-studio
             repository: HumanSignal/label-studio
             working-directory: web/
