@@ -128,8 +128,6 @@ jobs:
             working-directory: sdk/nodejs/
           - id: preact
             repository: preactjs/preact
-          - id: react-data-grid
-            repository: adazzle/react-data-grid
           - id: react-pdf
             repository: wojtekmaj/react-pdf
             arguments: --assist-enabled=false .
