@@ -53,7 +53,7 @@ export interface BiomeSummary {
 	unchanged?: number;
 	/** Number of matches */
 	matches?: number;
-	/** Execution duration in milliseconds */
+	/** Execution duration in nanoseconds */
 	duration?: number;
 	/** Number of errors */
 	errors?: number;
@@ -67,7 +67,7 @@ export interface BiomeSummary {
 	suggestedFixesSkipped?: number;
 	/** Number of diagnostics not printed */
 	diagnosticsNotPrinted?: number;
-	/** Scanner duration in milliseconds */
+	/** Scanner duration in nanoseconds */
 	scannerDuration?: number;
 }
 
@@ -140,14 +140,14 @@ export interface Config {
  *     "changed": 0,
  *     "unchanged": 2,
  *     "matches": 0,
- *     "duration": 1234.567890,
+ *     "duration": 1234567890,
  *     "errors": 5,
  *     "warnings": 3,
  *     "infos": 0,
  *     "skipped": 0,
  *     "suggestedFixesSkipped": 0,
  *     "diagnosticsNotPrinted": 0,
- *     "scannerDuration": 123.456
+ *     "scannerDuration": 123456789
  *   },
  *   "diagnostics": [...],
  *   "command": "check"
@@ -325,16 +325,20 @@ export function readReport(
 }
 
 /**
- * Format duration from biome report (duration is in milliseconds)
+ * Format duration from biome report (duration is in nanoseconds)
  */
 export function formatDuration(duration: number | undefined): string {
 	if (duration === undefined || duration === null) return "?";
 
-	if (duration < 1000) {
-		return `${Math.round(duration)}ms`;
+	// Convert nanoseconds to milliseconds: divide by 1,000,000
+	const totalMs = duration / 1_000_000;
+
+	if (totalMs < 1000) {
+		return `${Math.round(totalMs)}ms`;
 	}
 
-	return `${(duration / 1000).toFixed(1)}s`;
+	// Convert milliseconds to seconds
+	return `${(totalMs / 1000).toFixed(1)}s`;
 }
 
 /**

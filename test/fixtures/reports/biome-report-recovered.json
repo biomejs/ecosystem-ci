@@ -3,14 +3,14 @@
     "changed": 0,
     "unchanged": 5,
     "matches": 0,
-    "duration": 950,
+    "duration": 950000000,
     "errors": 2,
     "warnings": 1,
     "infos": 0,
     "skipped": 0,
     "suggestedFixesSkipped": 0,
     "diagnosticsNotPrinted": 0,
-    "scannerDuration": 80
+    "scannerDuration": 80000000
   },
   "command": "check"
 }

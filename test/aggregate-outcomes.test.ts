@@ -29,17 +29,17 @@ const fixturesDir = path.join(__dirname, "fixtures");
 
 describe("formatDuration", () => {
 	test("formats seconds correctly", () => {
-		const duration = 1500; // 1500ms = 1.5s
+		const duration = 1_500_000_000; // 1.5 seconds in nanoseconds
 		assert.strictEqual(formatDuration(duration), "1.5s");
 	});
 
 	test("formats milliseconds correctly", () => {
-		const duration = 234; // 234ms
+		const duration = 234_000_000; // 234ms in nanoseconds
 		assert.strictEqual(formatDuration(duration), "234ms");
 	});
 
 	test("rounds milliseconds", () => {
-		const duration = 234.567890; // rounds to 235ms
+		const duration = 234_567_890; // 234.567890ms in nanoseconds, rounds to 235ms
 		assert.strictEqual(formatDuration(duration), "235ms");
 	});
 
@@ -53,7 +53,7 @@ describe("formatDuration", () => {
 	});
 
 	test("formats large durations", () => {
-		const duration = 123456; // 123456ms = 123.5s
+		const duration = 123_456_000_000; // 123.456 seconds in nanoseconds = 123.5s
 		assert.strictEqual(formatDuration(duration), "123.5s");
 	});
 });
