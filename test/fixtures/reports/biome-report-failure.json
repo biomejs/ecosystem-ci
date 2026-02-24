@@ -1,0 +1,16 @@
+{
+  "summary": {
+    "changed": 0,
+    "unchanged": 15,
+    "matches": 0,
+    "duration": 2750,
+    "errors": 15,
+    "warnings": 8,
+    "infos": 2,
+    "skipped": 0,
+    "suggestedFixesSkipped": 0,
+    "diagnosticsNotPrinted": 0,
+    "scannerDuration": 200
+  },
+  "command": "check"
+}

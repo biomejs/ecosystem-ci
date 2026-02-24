@@ -19,7 +19,6 @@ import {
 	aggregateResults,
 	readMinimalOutcomes,
 	readReport,
-	type Duration,
 	type BiomeReport,
 	type MinimalOutcome,
 	type OutcomeData,
@@ -30,22 +29,22 @@ const fixturesDir = path.join(__dirname, "fixtures");
 
 describe("formatDuration", () => {
 	test("formats seconds correctly", () => {
-		const duration: Duration = { secs: 1, nanos: 500000000 };
+		const duration = 1500; // 1500ms = 1.5s
 		assert.strictEqual(formatDuration(duration), "1.5s");
 	});
 
 	test("formats milliseconds correctly", () => {
-		const duration: Duration = { secs: 0, nanos: 234000000 };
+		const duration = 234; // 234ms
 		assert.strictEqual(formatDuration(duration), "234ms");
 	});
 
 	test("rounds milliseconds", () => {
-		const duration: Duration = { secs: 0, nanos: 234567890 };
+		const duration = 234.567890; // rounds to 235ms
 		assert.strictEqual(formatDuration(duration), "235ms");
 	});
 
 	test("handles zero duration", () => {
-		const duration: Duration = { secs: 0, nanos: 0 };
+		const duration = 0;
 		assert.strictEqual(formatDuration(duration), "0ms");
 	});
 
@@ -54,7 +53,7 @@ describe("formatDuration", () => {
 	});
 
 	test("formats large durations", () => {
-		const duration: Duration = { secs: 123, nanos: 456000000 };
+		const duration = 123456; // 123456ms = 123.5s
 		assert.strictEqual(formatDuration(duration), "123.5s");
 	});
 });
@@ -258,7 +257,7 @@ describe("computeFullOutcome", () => {
 
 		assert.strictEqual(result.id, "failure");
 		assert.strictEqual(result.tag, "❌ 🆕"); // New project
-		assert.strictEqual(result.time, "2.8s");
+		assert.strictEqual(result.time, "2.8s"); // 2750ms = 2.8s
 		assert.strictEqual(result.outcome, "failure");
 	});
 

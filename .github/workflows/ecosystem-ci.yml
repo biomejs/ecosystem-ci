@@ -195,14 +195,8 @@ jobs:
         if: ${{ ! cancelled() }}
         working-directory: repository/${{ matrix.working-directory }}
         run: |
-          biome check --reporter=json --max-diagnostics=0 ${{ matrix.arguments || '.' }} 2>/dev/null \
-            | tee "$GITHUB_WORKSPACE/biome-report.json" || true
-
-          # Validate JSON and create placeholder if invalid or empty
-          if [ ! -s "$GITHUB_WORKSPACE/biome-report.json" ] || \
-             ! jq empty "$GITHUB_WORKSPACE/biome-report.json" 2>/dev/null; then
-            echo '{"error": true}' > "$GITHUB_WORKSPACE/biome-report.json"
-          fi
+          biome check --reporter=json --reporter-file="$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json" ${{ matrix.arguments || '.' }} || \
+            echo '{"error": true}' > "$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json"
 
       - name: Upload Biome report
         # Don't save the report if the biome binary was not built on main.
@@ -212,16 +206,11 @@ jobs:
           if-no-files-found: error
           retention-days: 10
           name: biome-report-${{ matrix.id }}
-          path: ${{ github.workspace }}/biome-report.json
+          path: ${{ github.workspace }}/biome-report-${{ matrix.id }}.json
 
       - name: Save outcome JSON
         run: |
-          cat > outcome.json <<EOF
-          {
-            "id": "${{ matrix.id }}",
-            "outcome": "${{ steps.test.outcome }}"
-          }
-          EOF
+          echo '{"id": "${{ matrix.id }}", "outcome": "${{ steps.test.outcome }}"}' > "$GITHUB_WORKSPACE/outcome-${{ matrix.id }}.json"
 
       - name: Upload outcome
         if: ${{ always() }}
@@ -230,7 +219,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           name: outcome-${{ matrix.id }}
-          path: outcome.json
+          path: ${{ github.workspace }}/outcome-${{ matrix.id }}.json
 
   notify-discord:
     name: Notify Discord

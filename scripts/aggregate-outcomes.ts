@@ -44,27 +44,31 @@ export interface MinimalOutcome {
 }
 
 /**
- * Duration object from Biome JSON report
- */
-export interface Duration {
-	/** Seconds */
-	secs: number;
-	/** Nanoseconds */
-	nanos: number;
-}
-
-/**
  * Summary statistics from Biome JSON report
  */
 export interface BiomeSummary {
-	/** Execution duration */
-	duration?: Duration;
+	/** Number of files changed */
+	changed?: number;
+	/** Number of files unchanged */
+	unchanged?: number;
+	/** Number of matches */
+	matches?: number;
+	/** Execution duration in milliseconds */
+	duration?: number;
 	/** Number of errors */
 	errors?: number;
 	/** Number of warnings */
 	warnings?: number;
 	/** Number of info diagnostics */
 	infos?: number;
+	/** Number of files skipped */
+	skipped?: number;
+	/** Number of suggested fixes skipped */
+	suggestedFixesSkipped?: number;
+	/** Number of diagnostics not printed */
+	diagnosticsNotPrinted?: number;
+	/** Scanner duration in milliseconds */
+	scannerDuration?: number;
 }
 
 /**
@@ -114,36 +118,39 @@ export interface Config {
 /*
  * Example JSON data structure that the script expects to receive:
  *
- * Directory structure:
+ * Directory structure (flat files):
  *   outcomes/
- *     outcome-ant-design/
- *       outcome.json
- *     outcome-astro/
- *       outcome.json
+ *     outcome-ant-design.json
+ *     outcome-astro.json
  *   reports/
- *     biome-report-ant-design/
- *       biome-report.json
- *     biome-report-astro/
- *       biome-report.json
+ *     biome-report-ant-design.json
+ *     biome-report-astro.json
  *   previous-reports/
- *     biome-report-ant-design/
- *       biome-report.json
+ *     biome-report-ant-design.json
  *
- * Content of outcome.json files (minimal):
+ * Content of outcome-*.json files:
  * {
  *   "id": "ant-design",
  *   "outcome": "success"
  * }
  *
- * Content of biome-report.json files (from biome check --reporter=json):
+ * Content of biome-report-*.json files (from biome check --reporter=json --reporter-file=...):
  * {
  *   "summary": {
- *     "duration": {"secs": 1, "nanos": 234567890},
+ *     "changed": 0,
+ *     "unchanged": 2,
+ *     "matches": 0,
+ *     "duration": 1234.567890,
  *     "errors": 5,
  *     "warnings": 3,
- *     "infos": 0
+ *     "infos": 0,
+ *     "skipped": 0,
+ *     "suggestedFixesSkipped": 0,
+ *     "diagnosticsNotPrinted": 0,
+ *     "scannerDuration": 123.456
  *   },
- *   "diagnostics": [...]
+ *   "diagnostics": [...],
+ *   "command": "check"
  * }
  */
 
@@ -182,18 +189,13 @@ Examples:
 
 Expected Directory Structure:
   outcomes/
-    outcome-ant-design/
-      outcome.json
-    outcome-astro/
-      outcome.json
+    outcome-ant-design.json
+    outcome-astro.json
   reports/
-    biome-report-ant-design/
-      biome-report.json
-    biome-report-astro/
-      biome-report.json
+    biome-report-ant-design.json
+    biome-report-astro.json
   previous-reports/ (optional)
-    biome-report-ant-design/
-      biome-report.json
+    biome-report-ant-design.json
 
 Output:
   Prints a formatted Discord message to stdout.
@@ -269,9 +271,9 @@ export function readMinimalOutcomes(outcomesDir: string): MinimalOutcome[] {
 		const entries = fs.readdirSync(outcomesDir);
 
 		for (const entry of entries) {
-			if (!entry.startsWith("outcome-")) continue;
+			if (!entry.startsWith("outcome-") || !entry.endsWith(".json")) continue;
 
-			const outcomeFile = path.join(outcomesDir, entry, "outcome.json");
+			const outcomeFile = path.join(outcomesDir, entry);
 
 			if (fs.existsSync(outcomeFile)) {
 				const content = fs.readFileSync(outcomeFile, "utf-8");
@@ -297,11 +299,7 @@ export function readReport(
 	reportsDir: string,
 	projectId: string,
 ): BiomeReport | null {
-	const reportPath = path.join(
-		reportsDir,
-		`biome-report-${projectId}`,
-		"biome-report.json",
-	);
+	const reportPath = path.join(reportsDir, `biome-report-${projectId}.json`);
 
 	if (fs.existsSync(reportPath)) {
 		try {
@@ -327,18 +325,16 @@ export function readReport(
 }
 
 /**
- * Format duration from biome report
+ * Format duration from biome report (duration is in milliseconds)
  */
-export function formatDuration(duration: Duration | undefined): string {
-	if (!duration) return "?";
+export function formatDuration(duration: number | undefined): string {
+	if (duration === undefined || duration === null) return "?";
 
-	const totalMs = duration.secs * 1000 + duration.nanos / 1000000;
-
-	if (totalMs < 1000) {
-		return `${Math.round(totalMs)}ms`;
+	if (duration < 1000) {
+		return `${Math.round(duration)}ms`;
 	}
 
-	return `${(totalMs / 1000).toFixed(1)}s`;
+	return `${(duration / 1000).toFixed(1)}s`;
 }
 
 /**
