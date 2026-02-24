@@ -184,16 +184,41 @@ jobs:
         id: test
         working-directory: repository/${{ matrix.working-directory }}
         run: |
-          # Run biome check with JSON reporter, capture exit code but always succeed
-          if biome check --error-on-warnings --max-diagnostics=1000 --reporter=json --reporter-file="$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json" ${{ matrix.arguments || '.' }}; then
+          # Define report file path
+          REPORT_FILE="$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json"
+          
+          # Run biome check with JSON reporter to file, capture exit code but always succeed
+          # Using --reporter=json with --reporter-file writes JSON to the file
+          # The diagnostic limit is automatically lifted when using non-default reporters
+          set +e
+          biome check --error-on-warnings --reporter=json --reporter-file="$REPORT_FILE" ${{ matrix.arguments || '.' }}
+          BIOME_EXIT_CODE=$?
+          set -e
+          
+          # Set outcome based on exit code
+          if [ $BIOME_EXIT_CODE -eq 0 ]; then
             echo "outcome=success" >> "$GITHUB_OUTPUT"
           else
             echo "outcome=failure" >> "$GITHUB_OUTPUT"
           fi
           
+          # Debug: Check if file was created
+          echo "Checking report file: $REPORT_FILE"
+          if [ -f "$REPORT_FILE" ]; then
+            FILE_SIZE=$(wc -c < "$REPORT_FILE")
+            echo "Report file exists, size: $FILE_SIZE bytes"
+            if [ $FILE_SIZE -gt 0 ]; then
+              echo "First 200 chars:"
+              head -c 200 "$REPORT_FILE" || true
+            fi
+          else
+            echo "ERROR: Report file was not created by Biome!"
+          fi
+          
           # If the report file doesn't exist or is empty, create error placeholder
-          if [ ! -f "$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json" ] || [ ! -s "$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json" ]; then
-            echo '{"error": true}' > "$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json"
+          if [ ! -f "$REPORT_FILE" ] || [ ! -s "$REPORT_FILE" ]; then
+            echo "Creating error placeholder because file is missing or empty"
+            echo '{"error": true}' > "$REPORT_FILE"
           fi
 
       - name: Upload Biome report
@@ -237,12 +262,14 @@ jobs:
         with:
           pattern: outcome-*
           path: outcomes/
+          merge-multiple: true
 
       - name: Download all biome report artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           pattern: biome-report-*
           path: reports/
+          merge-multiple: true
 
       - name: Download previous biome report artifacts
         uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11 # v6.0.0
@@ -254,6 +281,7 @@ jobs:
           # exclude tamagui because its download fails
           name: biome-report-(?!tamagui$).*
           path: previous-reports/
+          skip_unpack: false
 
       - name: Aggregate results
         id: aggregate
