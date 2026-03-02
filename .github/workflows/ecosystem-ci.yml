@@ -21,7 +21,7 @@ jobs:
     runs-on: depot-ubuntu-24.04-arm-64
     steps:
       - name: Checkout Biome
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: biomejs/biome
           ref: ${{ inputs.biome-ref }}
@@ -167,7 +167,7 @@ jobs:
           echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
 
       - name: Checkout ${{ matrix.repository }}
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ matrix.repository }}
           sparse-checkout: ${{ matrix.working-directory }}
@@ -250,7 +250,7 @@ jobs:
     runs-on: depot-ubuntu-24.04-arm-16
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Node.js
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
