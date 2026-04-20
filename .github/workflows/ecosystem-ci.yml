@@ -62,94 +62,106 @@ jobs:
           # - working-directory: where to execute `biome` (default is the root of the repository)
           #   The path is relative to the root of the repository
           # - arguments: extra arguments to pass to the `biome check` command (default is `.`)
-          - id: ant-design
-            repository: ant-design/ant-design
-          - id: apify-crawlee
-            repository: apify/crawlee
-            arguments: --assist-enabled=false .
-          - id: ariakit
-            repository: ariakit/ariakit
+          - id: n8n
+            repository: n8n-io/n8n
+          - id: django
+            repository: django/django
+          - id: cline
+            repository: cline/cline
           - id: astro
             repository: withastro/astro
-          - id: baidu-amis
-            repository: baidu/amis
-            working-directory: packages/office-viewer/
-            arguments: --assist-enabled=false .
-          - id: coder
-            repository: coder/coder
-            working-directory: site/
-            arguments: e2e/ src/
-          - id: discordjs
-            repository: discordjs/discord.js
-          - id: FluidFramework
-            repository: microsoft/FluidFramework
-          - id: farm-fe
-            repository: farm-fe/farm
-          - id: fiftyone-app
-            repository: voxel51/fiftyone
-            working-directory: app/packages/app/
-            arguments: ./src
-          - id: fiftyone-looker-3d
-            repository: voxel51/fiftyone
-            working-directory: app/packages/looker-3d/
-            arguments: ./src
-          - id: fiftyone-spotlight
-            repository: voxel51/fiftyone
-            working-directory: app/packages/spotlight/
-            arguments: ./src
-          - id: fontsource
-            repository: fontsource/fontsource
-            arguments: --assist-enabled=false .
-          - id: full-stack-fastapi-template
-            repository: fastapi/full-stack-fastapi-template
-            working-directory: frontend/
-          - id: google-mesop
-            repository: google/mesop
-          - id: label-studio
-            repository: HumanSignal/label-studio
-            working-directory: web/
-          - id: max-mapper-menubar
-            repository: max-mapper/menubar
-          - id: melonJS
-            repository: melonjs/melonJS
-          - id: openapi-fetch
-            repository: openapi-ts/openapi-typescript
-            working-directory: packages/openapi-fetch/
-          - id: openapi-react-query
-            repository: openapi-ts/openapi-typescript
-            working-directory: packages/openapi-react-query/
-          - id: openapi-typescript-helpers
-            repository: openapi-ts/openapi-typescript
-            working-directory: packages/openapi-typescript-helpers/
-          - id: pulumi
-            repository: pulumi/pulumi
-            working-directory: sdk/nodejs/
-          - id: preact
-            repository: preactjs/preact
-          - id: react-pdf
-            repository: wojtekmaj/react-pdf
-            arguments: --assist-enabled=false .
+          - id: cherry-studio
+            repository: CherryHQ/cherry-studio
+          - id: cal-diy
+            repository: cal.com/cal.diy
+          - id: novu
+            repository: novuhq/novu
           - id: refine
             repository: refinedev/refine
-          - id: rescript-compiler
-            repository: rescript-lang/rescript-compiler
-          - id: rspack
-            repository: web-infra-dev/rspack
-          - id: runtipi
-            repository: runtipi/runtipi
-          - id: spicetify
-            repository: spicetify/cli
-          - id: steven-tey-novel-headless
-            repository: steven-tey/novel
-            working-directory: packages/headless/
-          - id: steven-tey-novel-web
-            repository: steven-tey/novel
-            working-directory: apps/web/
-            arguments: --assist-enabled=false .
-          - id: unleash
-            repository: Unleash/unleash
+          - id: discordjs
+            repository: discordjs/discord.js
+          - id: nocobase
+            repository: nocobase/nocobase
+          - id: promptfoo
+            repository: promptfoo/promptfoo
+          - id: eliza
+            repository: elizaOS/eliza
+          - id: react-native-vector-icons
+            repository: oblador/react-native-vector-icons
+          - id: vercel
+            repository: vercel/vercel
+          - id: midday
+            repository: midday-ai/midday
+          - id: coder
+            repository: coder/coder
+          - id: ten-framework
+            repository: TEN-framework/ten-framework
+          - id: typebot
+            repository: baptisteArno/typebot.io
+          - id: coss
+            repository: cosscom/coss
+          - id: superset
+            repository: superset-sh/superset
+          - id: fast
+            repository: microsoft/fast
+          - id: react-native-vision-camera
+            repository: mrousavy/react-native-vision-camera
+          - id: nhost
+            repository: nhost/nhost
+          - id: openstatus
+            repository: openstatusHQ/openstatus
+          - id: kreuzberg
+            repository: kreuzberg-dev/kreuzberg
+          - id: podman-desktop
+            repository: podman-desktop/podman-desktop
+          - id: icons
+            repository: pqoqubbw/icons
+          - id: anytype-ts
+            repository: anyproto/anytype-ts
+          - id: raycast-extensions
+            repository: raycast/extensions
           - id: wagmi
             repository: wevm/wagmi
+          - id: stagewise
+            repository: stagewise-io/stagewise
+          - id: vike
+            repository: vikejs/vike
+          - id: rivet
+            repository: rivet-dev/rivet
+          - id: ark
+            repository: chakra-ui/ark
+          - id: streamdown
+            repository: vercel/streamdown
+          - id: modern-js
+            repository: web-infra-dev/modern.js
+          - id: FluidFramework
+            repository: microsoft/FluidFramework
+          - id: freelens
+            repository: freelensapp/freelens
+          - id: epicenter
+            repository: EpicenterHQ/epicenter
+          - id: pollinations
+            repository: pollinations/pollinations
+          - id: fern
+            repository: fern-api/fern
+          - id: livestore
+            repository: livestorejs/livestore
+          - id: vscode-material-icon-theme
+            repository: material-extensions/vscode-material-icon-theme
+          - id: scanpy
+            repository: scverse/scanpy
+          - id: indico
+            repository: indico/indico
+          - id: parabol
+            repository: ParabolInc/parabol
+          - id: carbon
+            repository: crbnos/carbon
+          - id: kokonutui
+            repository: kokonut-labs/kokonutui
+          - id: 8bitcn-ui
+            repository: TheOrcDev/8bitcn-ui
+          - id: c15t
+            repository: c15t/c15t
 
     name: Test ${{ matrix.id }}
     needs: build-biome
@@ -278,8 +290,7 @@ jobs:
           search_artifacts: true
           if_no_artifact_found: warn
           name_is_regexp: true
-          # exclude tamagui because its download fails
-          name: biome-report-(?!tamagui$).*
+          name: biome-report-.*
           path: previous-reports/
           skip_unpack: false
 
