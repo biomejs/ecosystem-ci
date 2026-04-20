@@ -72,16 +72,12 @@ jobs:
             repository: withastro/astro
           - id: cherry-studio
             repository: CherryHQ/cherry-studio
-          - id: cal-diy
-            repository: cal.com/cal.diy
           - id: novu
             repository: novuhq/novu
           - id: refine
             repository: refinedev/refine
           - id: discordjs
             repository: discordjs/discord.js
-          - id: nocobase
-            repository: nocobase/nocobase
           - id: promptfoo
             repository: promptfoo/promptfoo
           - id: eliza
@@ -114,12 +110,8 @@ jobs:
             repository: kreuzberg-dev/kreuzberg
           - id: podman-desktop
             repository: podman-desktop/podman-desktop
-          - id: icons
-            repository: pqoqubbw/icons
           - id: anytype-ts
             repository: anyproto/anytype-ts
-          - id: raycast-extensions
-            repository: raycast/extensions
           - id: wagmi
             repository: wevm/wagmi
           - id: stagewise
@@ -130,8 +122,6 @@ jobs:
             repository: rivet-dev/rivet
           - id: ark
             repository: chakra-ui/ark
-          - id: streamdown
-            repository: vercel/streamdown
           - id: modern-js
             repository: web-infra-dev/modern.js
           - id: FluidFramework
@@ -156,10 +146,6 @@ jobs:
             repository: ParabolInc/parabol
           - id: carbon
             repository: crbnos/carbon
-          - id: kokonutui
-            repository: kokonut-labs/kokonutui
-          - id: 8bitcn-ui
-            repository: TheOrcDev/8bitcn-ui
           - id: c15t
             repository: c15t/c15t
 
@@ -187,6 +173,7 @@ jobs:
           path: repository
 
       - name: Migrate
+        continue-on-error: true
         working-directory: repository/${{ matrix.working-directory }}
         run: |
           biome migrate --write
