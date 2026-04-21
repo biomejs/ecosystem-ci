@@ -271,7 +271,7 @@ jobs:
           merge-multiple: true
 
       - name: Download previous biome report artifacts
-        uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11 # v6.0.0
+        uses: dawidd6/action-download-artifact@8305c0f1062bb0d184d09ef4493ecb9288447732 # v20
         with:
           workflow_conclusion: completed
           search_artifacts: true
