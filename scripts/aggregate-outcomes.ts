@@ -144,6 +144,7 @@ export interface Config {
 	previousReportsDir?: string;
 	biomeRef?: string;
 	runUrl?: string;
+	json: boolean;
 }
 
 /*
@@ -201,6 +202,7 @@ Options:
   -p, --previous-reports-dir <path>  Path to directory with previous reports (optional, for trends)
   -b, --biome-ref <ref>              Biome reference (branch/tag) used in the test run (optional)
   -u, --run-url <url>                GitHub Actions run URL for linking (optional)
+      --json                         Print Discord message chunks as a JSON array
   -h, --help                         Show this help message
 
 Examples:
@@ -259,6 +261,10 @@ export function parseCliArgs(): Config {
 				type: "string",
 				short: "u",
 			},
+			json: {
+				type: "boolean",
+				default: false,
+			},
 			help: {
 				type: "boolean",
 				short: "h",
@@ -289,6 +295,7 @@ export function parseCliArgs(): Config {
 		previousReportsDir: values["previous-reports-dir"],
 		biomeRef: values["biome-ref"],
 		runUrl: values["run-url"],
+		json: values.json,
 	};
 }
 
@@ -559,6 +566,50 @@ export function aggregateResults(
 	return messageParts.join("\n");
 }
 
+export const DISCORD_MESSAGE_MAX_LENGTH = 2_000;
+
+/**
+ * Split a report into messages accepted by Discord.
+ *
+ * Lines are kept intact so each project result remains readable.
+ */
+export function splitDiscordMessage(
+	message: string,
+	maxLength = DISCORD_MESSAGE_MAX_LENGTH,
+): string[] {
+	if (!Number.isInteger(maxLength) || maxLength < 1) {
+		throw new RangeError("maxLength must be a positive integer");
+	}
+
+	const chunks: string[] = [];
+	let currentLines: string[] = [];
+	let currentLength = 0;
+
+	for (const line of message.split("\n")) {
+		if (line.length > maxLength) {
+			throw new RangeError(
+				`A report line is ${line.length} characters, exceeding Discord's ${maxLength}-character message limit`,
+			);
+		}
+
+		const separatorLength = currentLines.length > 0 ? 1 : 0;
+		if (currentLength + separatorLength + line.length > maxLength) {
+			chunks.push(currentLines.join("\n"));
+			currentLines = [];
+			currentLength = 0;
+		}
+
+		if (currentLines.length > 0) {
+			currentLength++;
+		}
+		currentLines.push(line);
+		currentLength += line.length;
+	}
+
+	chunks.push(currentLines.join("\n"));
+	return chunks;
+}
+
 /**
  * Format one project's diagnostic metrics for Discord.
  */
@@ -619,5 +670,9 @@ export function main(): void {
 		config.biomeRef,
 		config.runUrl,
 	);
-	console.info(message);
+	if (config.json) {
+		console.info(JSON.stringify(splitDiscordMessage(message)));
+	} else {
+		console.info(message);
+	}
 }
