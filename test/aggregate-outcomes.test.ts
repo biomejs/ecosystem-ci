@@ -19,12 +19,18 @@ import {
 	aggregateResults,
 	getDiagnosticMetrics,
 	formatDiagnosticComparison,
+	splitDiscordMessage,
 	readMinimalOutcomes,
 	readReport,
 	type BiomeReport,
 	type MinimalOutcome,
 	type OutcomeData,
 } from "../scripts/aggregate-outcomes.ts";
+import {
+	DISCORD_WEBHOOK_INITIAL_RETRY_DELAY_MS,
+	DISCORD_WEBHOOK_MAX_ATTEMPTS,
+	sendDiscordMessage,
+} from "../scripts/discord-webhook.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.join(__dirname, "fixtures");
@@ -491,6 +497,77 @@ describe("aggregateResults", () => {
 		assert.ok(message.includes("I: 1 (0)"));
 		assert.ok(message.includes("parse: 3 (+2)"));
 		assert.ok(message.includes("panic: yes (was no)"));
+	});
+});
+
+describe("splitDiscordMessage", () => {
+	test("keeps short messages intact", () => {
+		assert.deepStrictEqual(splitDiscordMessage("short report"), ["short report"]);
+	});
+
+	test("packs whole lines into messages within the limit", () => {
+		const lines = Array.from(
+			{ length: 100 },
+			(_, index) => `${index}: ${"result".repeat(5)}`,
+		);
+		const chunks = splitDiscordMessage(lines.join("\n"), 200);
+
+		assert.ok(chunks.length > 1);
+		assert.ok(chunks.every((chunk) => chunk.length <= 200));
+		assert.deepStrictEqual(chunks.flatMap((chunk) => chunk.split("\n")), lines);
+	});
+
+	test("rejects a line that cannot fit in one Discord message", () => {
+		assert.throws(
+			() => splitDiscordMessage("a".repeat(2001)),
+			/exceeding Discord's 2000-character message limit/,
+		);
+	});
+});
+
+describe("sendDiscordMessage", () => {
+	test("retries with exponential backoff", async () => {
+		let attempts = 0;
+		const delays: number[] = [];
+
+		await sendDiscordMessage("https://example.com/webhook", "report", {
+			fetchImpl: async () => {
+				attempts++;
+				return new Response(undefined, { status: attempts < 3 ? 500 : 204 });
+			},
+			sleep: async (milliseconds) => {
+				delays.push(milliseconds);
+			},
+		});
+
+		assert.strictEqual(attempts, 3);
+		assert.deepStrictEqual(delays, [
+			DISCORD_WEBHOOK_INITIAL_RETRY_DELAY_MS,
+			DISCORD_WEBHOOK_INITIAL_RETRY_DELAY_MS * 2,
+		]);
+	});
+
+	test("stops after ten attempts", async () => {
+		let attempts = 0;
+		const delays: number[] = [];
+
+		await assert.rejects(
+			sendDiscordMessage("https://example.com/webhook", "report", {
+				fetchImpl: async () => {
+					attempts++;
+					throw new Error("network error");
+				},
+				sleep: async (milliseconds) => {
+					delays.push(milliseconds);
+				},
+			}),
+			/failed after 10 attempts/,
+		);
+
+		assert.strictEqual(attempts, DISCORD_WEBHOOK_MAX_ATTEMPTS);
+		assert.strictEqual(delays.length, DISCORD_WEBHOOK_MAX_ATTEMPTS - 1);
+		assert.strictEqual(delays[0], 60_000);
+		assert.strictEqual(delays.at(-1), 15_360_000);
 	});
 });
 
