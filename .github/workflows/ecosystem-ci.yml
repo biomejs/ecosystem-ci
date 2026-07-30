@@ -62,8 +62,6 @@ jobs:
           # - working-directory: where to execute `biome` (default is the root of the repository)
           #   The path is relative to the root of the repository
           # - arguments: extra arguments to pass to the `biome check` command (default is `.`)
-          - id: n8n
-            repository: n8n-io/n8n
           - id: django
             repository: django/django
           - id: cline
@@ -74,8 +72,6 @@ jobs:
             repository: CherryHQ/cherry-studio
           - id: novu
             repository: novuhq/novu
-          - id: refine
-            repository: refinedev/refine
           - id: discordjs
             repository: discordjs/discord.js
           - id: promptfoo
@@ -104,10 +100,6 @@ jobs:
             repository: mrousavy/react-native-vision-camera
           - id: nhost
             repository: nhost/nhost
-          - id: openstatus
-            repository: openstatusHQ/openstatus
-          - id: kreuzberg
-            repository: kreuzberg-dev/kreuzberg
           - id: podman-desktop
             repository: podman-desktop/podman-desktop
           - id: anytype-ts
@@ -134,8 +126,6 @@ jobs:
             repository: pollinations/pollinations
           - id: fern
             repository: fern-api/fern
-          - id: livestore
-            repository: livestorejs/livestore
           - id: vscode-material-icon-theme
             repository: material-extensions/vscode-material-icon-theme
           - id: scanpy
@@ -148,6 +138,14 @@ jobs:
             repository: crbnos/carbon
           - id: c15t
             repository: c15t/c15t
+          - id: opentogethertube
+            repository: dyc3/opentogethertube
+          - id: prisma-next
+            repository: prisma/prisma-next
+          - id: liam
+            repository: liam-hq/liam
+          - id: byline-cms
+            repository: Byline-CMS/bylinecms.dev
 
     name: Test ${{ matrix.id }}
     needs: build-biome
@@ -185,7 +183,7 @@ jobs:
         run: |
           # Define report file path
           REPORT_FILE="$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json"
-          
+
           # Run biome check with JSON reporter to file, capture exit code but always succeed
           # Using --reporter=json with --reporter-file writes JSON to the file
           # The diagnostic limit is automatically lifted when using non-default reporters
@@ -193,14 +191,14 @@ jobs:
           biome check --error-on-warnings --reporter=json --reporter-file="$REPORT_FILE" ${{ matrix.arguments || '.' }}
           BIOME_EXIT_CODE=$?
           set -e
-          
+
           # Set outcome based on exit code
           if [ $BIOME_EXIT_CODE -eq 0 ]; then
             echo "outcome=success" >> "$GITHUB_OUTPUT"
           else
             echo "outcome=failure" >> "$GITHUB_OUTPUT"
           fi
-          
+
           # Debug: Check if file was created
           echo "Checking report file: $REPORT_FILE"
           if [ -f "$REPORT_FILE" ]; then
@@ -213,7 +211,7 @@ jobs:
           else
             echo "ERROR: Report file was not created by Biome!"
           fi
-          
+
           # If the report file doesn't exist or is empty, create error placeholder
           if [ ! -f "$REPORT_FILE" ] || [ ! -s "$REPORT_FILE" ]; then
             echo "Creating error placeholder because file is missing or empty"
