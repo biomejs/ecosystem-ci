@@ -12,5 +12,8 @@
     "diagnosticsNotPrinted": 0,
     "scannerDuration": 150000000
   },
+  "diagnostics": [
+    { "category": "parse" }
+  ],
   "command": "check"
 }

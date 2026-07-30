@@ -41,6 +41,8 @@ export interface MinimalOutcome {
 	id: string;
 	/** Test outcome: "success" | "failure" | "skipped" | other */
 	outcome: string;
+	/** Current and previous diagnostic metrics for this project */
+	diagnostics?: DiagnosticComparison;
 }
 
 /**
@@ -72,13 +74,42 @@ export interface BiomeSummary {
 }
 
 /**
+ * Diagnostic entry from a Biome JSON report
+ */
+export interface BiomeDiagnostic {
+	/** Diagnostic category (e.g., "parse" or "internalError/panic") */
+	category?: string;
+}
+
+/**
  * Biome JSON report structure
  */
 export interface BiomeReport {
 	/** Summary statistics */
 	summary?: BiomeSummary;
+	/** Diagnostics emitted by Biome */
+	diagnostics?: BiomeDiagnostic[];
 	/** Error flag (set when report generation failed) */
 	error?: boolean;
+}
+
+/**
+ * Ecosystem-wide diagnostic metrics
+ */
+export interface DiagnosticMetrics {
+	errors: number;
+	warnings: number;
+	infos: number;
+	parse: number;
+	panic: boolean;
+}
+
+/**
+ * Current diagnostic metrics and, when available, the previous run's metrics
+ */
+export interface DiagnosticComparison {
+	current: DiagnosticMetrics | null;
+	previous: DiagnosticMetrics | null;
 }
 
 /**
@@ -325,6 +356,34 @@ export function readReport(
 }
 
 /**
+ * Extract diagnostic metrics from a valid report.
+ */
+export function getDiagnosticMetrics(
+	report: BiomeReport | null,
+): DiagnosticMetrics | null {
+	if (!report || report.error) return null;
+
+	const metrics: DiagnosticMetrics = {
+		errors: report.summary?.errors ?? 0,
+		warnings: report.summary?.warnings ?? 0,
+		infos: report.summary?.infos ?? 0,
+		parse: 0,
+		panic: false,
+	};
+
+	for (const diagnostic of report.diagnostics ?? []) {
+		if (diagnostic.category === "parse") {
+			metrics.parse++;
+		}
+		if (diagnostic.category === "internalError/panic") {
+			metrics.panic = true;
+		}
+	}
+
+	return metrics;
+}
+
+/**
  * Format duration from biome report (duration is in nanoseconds)
  */
 export function formatDuration(duration: number | undefined): string {
@@ -432,6 +491,10 @@ export function computeFullOutcome(
 		tag,
 		time,
 		outcome,
+		diagnostics: {
+			current: getDiagnosticMetrics(currentReport),
+			previous: getDiagnosticMetrics(previousReport),
+		},
 	};
 }
 
@@ -461,7 +524,10 @@ export function aggregateResults(
 			other++;
 		}
 
-		return `${outcome.tag} **${outcome.id}** ${outcome.time}`;
+		const diagnostics = outcome.diagnostics
+			? ` — ${formatDiagnosticComparison(outcome.diagnostics)}`
+			: "";
+		return `${outcome.tag} **${outcome.id}** ${outcome.time}${diagnostics}`;
 	});
 
 	const total = outcomes.length;
@@ -491,6 +557,37 @@ export function aggregateResults(
 	}
 
 	return messageParts.join("\n");
+}
+
+/**
+ * Format one project's diagnostic metrics for Discord.
+ */
+export function formatDiagnosticComparison({
+	current,
+	previous,
+}: DiagnosticComparison): string {
+	if (!current) {
+		return "diagnostics unavailable";
+	}
+
+	const formatCount = (value: number, previousValue: number | undefined) => {
+		if (previousValue === undefined) return String(value);
+
+		const delta = value - previousValue;
+		const formattedDelta = delta > 0 ? `+${delta}` : String(delta);
+		return `${value} (${formattedDelta})`;
+	};
+
+	const metrics = [
+		`E: ${formatCount(current.errors, previous?.errors)}`,
+		`W: ${formatCount(current.warnings, previous?.warnings)}`,
+		`I: ${formatCount(current.infos, previous?.infos)}`,
+		`parse: ${formatCount(current.parse, previous?.parse)}`,
+	].join(", ");
+	const panic = current.panic ? "yes" : "no";
+	const previousPanic = previous ? ` (was ${previous.panic ? "yes" : "no"})` : "";
+
+	return `${metrics}, panic: ${panic}${previousPanic}`;
 }
 
 /**
