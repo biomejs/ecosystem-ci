@@ -12,5 +12,9 @@
     "diagnosticsNotPrinted": 0,
     "scannerDuration": 200000000
   },
+  "diagnostics": [
+    { "category": "parse" },
+    { "category": "internalError/panic" }
+  ],
   "command": "check"
 }

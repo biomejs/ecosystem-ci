@@ -12,5 +12,6 @@
     "diagnosticsNotPrinted": 0,
     "scannerDuration": 80000000
   },
+  "diagnostics": [],
   "command": "check"
 }

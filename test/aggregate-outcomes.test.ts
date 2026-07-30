@@ -17,6 +17,8 @@ import {
 	computeBaseTag,
 	computeFullOutcome,
 	aggregateResults,
+	getDiagnosticMetrics,
+	formatDiagnosticComparison,
 	readMinimalOutcomes,
 	readReport,
 	type BiomeReport,
@@ -227,6 +229,74 @@ describe("readReport", () => {
 	});
 });
 
+describe("getDiagnosticMetrics", () => {
+	test("extracts severities, parse diagnostics, and panics", () => {
+		const reportsDir = path.join(fixturesDir, "reports");
+		const report = readReport(reportsDir, "failure");
+
+		assert.deepStrictEqual(getDiagnosticMetrics(report), {
+			errors: 15,
+			warnings: 8,
+			infos: 2,
+			parse: 1,
+			panic: true,
+		});
+	});
+
+	test("returns null for missing reports and error placeholders", () => {
+		assert.strictEqual(getDiagnosticMetrics(null), null);
+		assert.strictEqual(getDiagnosticMetrics({ error: true }), null);
+	});
+});
+
+describe("formatDiagnosticComparison", () => {
+	test("formats changes from previous metrics", () => {
+		const line = formatDiagnosticComparison({
+			current: {
+				errors: 12,
+				warnings: 4,
+				infos: 1,
+				parse: 3,
+				panic: true,
+			},
+			previous: {
+				errors: 10,
+				warnings: 5,
+				infos: 1,
+				parse: 1,
+				panic: false,
+			},
+		});
+
+		assert.strictEqual(
+			line,
+			"E: 12 (+2), W: 4 (-1), I: 1 (0), parse: 3 (+2), panic: yes (was no)",
+		);
+	});
+
+	test("omits comparisons when previous metrics are unavailable", () => {
+		const line = formatDiagnosticComparison({
+			current: {
+				errors: 1,
+				warnings: 2,
+				infos: 3,
+				parse: 4,
+				panic: false,
+			},
+			previous: null,
+		});
+
+		assert.strictEqual(line, "E: 1, W: 2, I: 3, parse: 4, panic: no");
+	});
+
+	test("reports unavailable current metrics", () => {
+		assert.strictEqual(
+			formatDiagnosticComparison({ current: null, previous: null }),
+			"diagnostics unavailable",
+		);
+	});
+});
+
 describe("computeFullOutcome", () => {
 	const reportsDir = path.join(fixturesDir, "reports");
 	const previousReportsDir = path.join(fixturesDir, "previous-reports");
@@ -387,6 +457,41 @@ describe("aggregateResults", () => {
 
 		assert.ok(message.includes("**Summary:** 2 passed, 1 failed, 1 other (total: 4)"));
 	});
+
+	test("includes diagnostic metrics and comparisons", () => {
+		const outcomes: OutcomeData[] = [
+			{
+				id: "test",
+				tag: "✅",
+				time: "1s",
+				outcome: "success",
+				diagnostics: {
+					current: {
+						errors: 12,
+						warnings: 4,
+						infos: 1,
+						parse: 3,
+						panic: true,
+					},
+					previous: {
+						errors: 10,
+						warnings: 5,
+						infos: 1,
+						parse: 1,
+						panic: false,
+					},
+				},
+			},
+		];
+
+		const message = aggregateResults(outcomes);
+
+		assert.ok(message.includes("**test** 1s — E: 12 (+2)"));
+		assert.ok(message.includes("W: 4 (-1)"));
+		assert.ok(message.includes("I: 1 (0)"));
+		assert.ok(message.includes("parse: 3 (+2)"));
+		assert.ok(message.includes("panic: yes (was no)"));
+	});
 });
 
 describe("Integration tests", () => {
@@ -422,6 +527,18 @@ describe("Integration tests", () => {
 		assert.ok(message.includes("1.5s")); // success time
 		assert.ok(message.includes("2.8s")); // failure time
 		assert.ok(message.includes("950ms")); // recovered time
+
+		// Verify per-project diagnostic metrics and comparisons
+		assert.ok(
+			message.includes(
+				"**success** 1.5s — E: 5 (-5), W: 3 (-2), I: 1 (-1), parse: 2 (+1), panic: no (was no)",
+			),
+		);
+		assert.ok(
+			message.includes(
+				"**failure** 2.8s — E: 15, W: 8, I: 2, parse: 1, panic: yes",
+			),
+		);
 	});
 });
 
