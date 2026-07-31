@@ -552,6 +552,13 @@ export function aggregateResults(
 	}
 
 	messageParts.push("");
+	messageParts.push(
+		"**Legend:** ✅ passed · ❌ failed · ❓ other · ⚠️ Biome run error · 🆕 no comparable previous report · 📈 more diagnostics · 📉 fewer diagnostics",
+	);
+	messageParts.push(
+		"`E` errors · `W` warnings · `I` information · `parse` parse diagnostics · `panic` internal panic · parentheses compare with the previous run",
+	);
+	messageParts.push("");
 	messageParts.push(...lines);
 	messageParts.push("");
 	messageParts.push(
@@ -571,7 +578,8 @@ export const DISCORD_MESSAGE_MAX_LENGTH = 2_000;
 /**
  * Split a report into messages accepted by Discord.
  *
- * Lines are kept intact so each project result remains readable.
+ * Lines are kept intact so each project result remains readable. Continuation
+ * messages start with a newline to visually separate consecutive webhooks.
  */
 export function splitDiscordMessage(
 	message: string,
@@ -594,9 +602,15 @@ export function splitDiscordMessage(
 
 		const separatorLength = currentLines.length > 0 ? 1 : 0;
 		if (currentLength + separatorLength + line.length > maxLength) {
-			chunks.push(currentLines.join("\n"));
+			chunks.push(`${chunks.length > 0 ? "\n" : ""}${currentLines.join("\n")}`);
 			currentLines = [];
-			currentLength = 0;
+			currentLength = 1;
+		}
+
+		if (currentLength + line.length > maxLength) {
+			throw new RangeError(
+				`A report line is ${line.length} characters and cannot fit after the leading newline in Discord's ${maxLength}-character message limit`,
+			);
 		}
 
 		if (currentLines.length > 0) {
@@ -606,7 +620,7 @@ export function splitDiscordMessage(
 		currentLength += line.length;
 	}
 
-	chunks.push(currentLines.join("\n"));
+	chunks.push(`${chunks.length > 0 ? "\n" : ""}${currentLines.join("\n")}`);
 	return chunks;
 }
 
@@ -635,7 +649,7 @@ export function formatDiagnosticComparison({
 		`I: ${formatCount(current.infos, previous?.infos)}`,
 		`parse: ${formatCount(current.parse, previous?.parse)}`,
 	].join(", ");
-	const panic = current.panic ? "yes" : "no";
+	const panic = current.panic ? "**yes**" : "no";
 	const previousPanic = previous ? ` (was ${previous.panic ? "yes" : "no"})` : "";
 
 	return `${metrics}, panic: ${panic}${previousPanic}`;

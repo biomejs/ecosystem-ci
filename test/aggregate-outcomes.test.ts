@@ -276,7 +276,7 @@ describe("formatDiagnosticComparison", () => {
 
 		assert.strictEqual(
 			line,
-			"E: 12 (+2), W: 4 (-1), I: 1 (0), parse: 3 (+2), panic: yes (was no)",
+			"E: 12 (+2), W: 4 (-1), I: 1 (0), parse: 3 (+2), panic: **yes** (was no)",
 		);
 	});
 
@@ -496,7 +496,7 @@ describe("aggregateResults", () => {
 		assert.ok(message.includes("W: 4 (-1)"));
 		assert.ok(message.includes("I: 1 (0)"));
 		assert.ok(message.includes("parse: 3 (+2)"));
-		assert.ok(message.includes("panic: yes (was no)"));
+		assert.ok(message.includes("panic: **yes** (was no)"));
 	});
 });
 
@@ -514,7 +514,21 @@ describe("splitDiscordMessage", () => {
 
 		assert.ok(chunks.length > 1);
 		assert.ok(chunks.every((chunk) => chunk.length <= 200));
-		assert.deepStrictEqual(chunks.flatMap((chunk) => chunk.split("\n")), lines);
+		assert.ok(chunks.slice(1).every((chunk) => chunk.startsWith("\n")));
+		assert.deepStrictEqual(
+			chunks.flatMap((chunk, index) =>
+				(index === 0 ? chunk : chunk.slice(1)).split("\n"),
+			),
+			lines,
+		);
+	});
+
+	test("counts the leading newline toward the message limit", () => {
+		assert.deepStrictEqual(splitDiscordMessage("aa\nbb", 3), ["aa", "\nbb"]);
+		assert.throws(
+			() => splitDiscordMessage("a\nbbb", 3),
+			/cannot fit after the leading newline/,
+		);
 	});
 
 	test("rejects a line that cannot fit in one Discord message", () => {
@@ -613,7 +627,7 @@ describe("Integration tests", () => {
 		);
 		assert.ok(
 			message.includes(
-				"**failure** 2.8s — E: 15, W: 8, I: 2, parse: 1, panic: yes",
+				"**failure** 2.8s — E: 15, W: 8, I: 2, parse: 1, panic: **yes**",
 			),
 		);
 	});
