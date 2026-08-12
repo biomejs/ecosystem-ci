@@ -337,7 +337,16 @@ export function readReport(
 	reportsDir: string,
 	projectId: string,
 ): BiomeReport | null {
-	const reportPath = path.join(reportsDir, `biome-report-${projectId}.json`);
+	const reportName = `biome-report-${projectId}.json`;
+	const flatReportPath = path.join(reportsDir, reportName);
+	const nestedReportPath = path.join(
+		reportsDir,
+		`biome-report-${projectId}`,
+		reportName,
+	);
+	const reportPath = fs.existsSync(flatReportPath)
+		? flatReportPath
+		: nestedReportPath;
 
 	if (fs.existsSync(reportPath)) {
 		try {

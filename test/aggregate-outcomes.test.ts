@@ -227,6 +227,14 @@ describe("readReport", () => {
 		assert.strictEqual(report.error, true);
 	});
 
+	test("reads report nested under its artifact name", () => {
+		const reportsDir = path.join(fixturesDir, "nested-reports");
+		const report = readReport(reportsDir, "nested");
+
+		assert.ok(report?.summary);
+		assert.strictEqual(report.summary.errors, 7);
+	});
+
 	test("returns null for missing report", () => {
 		const reportsDir = path.join(fixturesDir, "reports");
 		const report = readReport(reportsDir, "nonexistent");
