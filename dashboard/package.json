@@ -1,0 +1,28 @@
+{
+	"name": "@biomejs/ecosystem-ci-dashboard",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"deploy": "bun run build && wrangler deploy",
+		"cf-typegen": "wrangler types cloudflare-env.d.ts",
+		"db:migrate:local": "wrangler d1 migrations apply DB --local",
+		"db:migrate:remote": "wrangler d1 migrations apply DB --remote"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260819.1",
+		"@sveltejs/adapter-cloudflare": "^7.2.9",
+		"@sveltejs/kit": "^2.70.3",
+		"@tailwindcss/vite": "^4.3.3",
+		"@types/node": "^22.19.1",
+		"svelte": "^5.56.10",
+		"svelte-check": "^4.7.6",
+		"tailwindcss": "^4.3.3",
+		"typescript": "^5.9.3",
+		"vite": "^8.2.2",
+		"wrangler": "^4.124.0"
+	}
+}

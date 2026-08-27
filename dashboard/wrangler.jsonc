@@ -1,0 +1,22 @@
+{
+	"$schema": "../node_modules/wrangler/config-schema.json",
+	"name": "biome-ecosystem-ci-dashboard",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"compatibility_date": "2026-08-27",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "biome-ecosystem-ci",
+			"database_id": "local",
+			"migrations_dir": "migrations"
+		}
+	]
+}

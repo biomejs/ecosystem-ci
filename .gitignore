@@ -1,2 +1,8 @@
 target/
-.claude/
+node_modules/
+.svelte-kit/
+build/
+.wrangler/
+.env
+.env.*
+!.env.example
