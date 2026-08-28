@@ -81,24 +81,37 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 	{@const last = lastDefined(vals)}
 	{@const prev = last ? lastDefined(vals, last.index - 1) : null}
 	{@const hv = hover.index === null ? undefined : vals[hover.index]}
-	<div class="num pr-1 text-right">
-		{#if hover.index !== null}
-			<div class="font-semibold">{hv === null || hv === undefined ? "—" : m.format(hv)}</div>
-			<div class="muted text-[11px]">{hv === null ? "no report" : formatDay(runs[hover.index].startedAt)}</div>
-		{:else if last && f}
-			<div class="font-semibold">{m.format(last.value)}</div>
-			<div class="text-[11px] font-semibold" style:color={deltaColor(f)}>
-				{deltaGlyph(f)} {formatDeltaShort(f.after, f.before, m.key)}
-			</div>
-			<div class="muted text-[10px]">
-				{f.kind === "spike" ? "latest run only" : `since ${formatDay(runs[f.at].startedAt)}`}
-			</div>
-		{:else if last}
-			<div class="font-semibold">{m.format(last.value)}</div>
-			<div class="muted text-[11px]">{prev ? formatDeltaShort(last.value, prev.value, m.key) : ""}</div>
-		{:else}
-			<div class="muted">—</div>
-		{/if}
+	<div class="num grid pr-1 text-right">
+		<div
+			class="col-start-1 row-start-1"
+			class:invisible={hover.index !== null}
+			aria-hidden={hover.index !== null}
+		>
+			{#if last && f}
+				<div class="font-semibold">{m.format(last.value)}</div>
+				<div class="text-[11px] font-semibold" style:color={deltaColor(f)}>
+					{deltaGlyph(f)} {formatDeltaShort(f.after, f.before, m.key)}
+				</div>
+				<div class="muted text-[10px]">
+					{f.kind === "spike" ? "latest run only" : `since ${formatDay(runs[f.at].startedAt)}`}
+				</div>
+			{:else if last}
+				<div class="font-semibold">{m.format(last.value)}</div>
+				<div class="muted text-[11px]">{prev ? formatDeltaShort(last.value, prev.value, m.key) : ""}</div>
+			{:else}
+				<div class="muted">—</div>
+			{/if}
+		</div>
+		<div
+			class="col-start-1 row-start-1"
+			class:invisible={hover.index === null}
+			aria-hidden={hover.index === null}
+		>
+			{#if hover.index !== null}
+				<div class="font-semibold">{hv === null || hv === undefined ? "—" : m.format(hv)}</div>
+				<div class="muted text-[11px]">{hv === null ? "no report" : formatDay(runs[hover.index].startedAt)}</div>
+			{/if}
+		</div>
 	</div>
 {/snippet}
 
@@ -210,8 +223,9 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 					{@const sevFinding = SEVERITIES.map((s) => findingFor(repo, s.key))
 						.filter((x): x is Finding => !!x)
 						.sort((a, b) => Number(b.worse) - Number(a.worse) || b.at - a.at)[0]}
-					{@const at = hover.index ?? lastTotal?.index ?? null}
-					{@const cellAt = at === null ? null : repo.cells[at]}
+					{@const latestAt = lastTotal?.index ?? null}
+					{@const latestCell = latestAt === null ? null : repo.cells[latestAt]}
+					{@const hoverCell = hover.index === null ? null : repo.cells[hover.index]}
 					<div class="grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-2 border-l px-2 py-1" style="border-color: var(--hair); border-bottom: 1px solid var(--hair)" style:border-top={divider ? "2px solid var(--base)" : "none"}>
 						<StackedArea
 							{runs}
@@ -220,19 +234,37 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 							axis={lastRow ? "dates" : "none"}
 							ariaLabel={`${SEVERITY_LABEL} for ${repo.slug} over ${runs.length} runs`}
 						/>
-						<div class="num pr-1 text-right">
-							{#if cellAt && !cellAt.missing}
-								<div class="font-semibold">{formatCount(totals[at as number] as number)}</div>
-								<div class="muted text-[11px]">{cellAt.errors} · {cellAt.warnings} · {cellAt.infos}</div>
-								{#if hover.index === null && sevFinding}
+						<div class="num grid pr-1 text-right">
+							<div
+								class="col-start-1 row-start-1"
+								class:invisible={hover.index !== null}
+								aria-hidden={hover.index !== null}
+							>
+								{#if latestCell && !latestCell.missing && latestAt !== null}
+									<div class="font-semibold">{formatCount(totals[latestAt] as number)}</div>
+									<div class="muted text-[11px]">{latestCell.errors} · {latestCell.warnings} · {latestCell.infos}</div>
+								{:else}
+									<div class="muted">—</div>
+								{/if}
+								{#if sevFinding}
 									<div class="text-[11px] font-semibold" style:color={deltaColor(sevFinding)}>
 										{deltaGlyph(sevFinding)} {formatDeltaShort(sevFinding.after, sevFinding.before, sevFinding.metric.key)} {sevFinding.metric.label.toLowerCase()}
 									</div>
 									<div class="muted text-[10px]">since {formatDay(runs[sevFinding.at].startedAt)}</div>
 								{/if}
-							{:else}
-								<div class="muted">—</div>
-							{/if}
+							</div>
+							<div
+								class="col-start-1 row-start-1"
+								class:invisible={hover.index === null}
+								aria-hidden={hover.index === null}
+							>
+								{#if hover.index !== null && hoverCell && !hoverCell.missing}
+									<div class="font-semibold">{formatCount(totals[hover.index] as number)}</div>
+									<div class="muted text-[11px]">{hoverCell.errors} · {hoverCell.warnings} · {hoverCell.infos}</div>
+								{:else}
+									<div class="muted">—</div>
+								{/if}
+							</div>
 						</div>
 					</div>
 				{/each}
