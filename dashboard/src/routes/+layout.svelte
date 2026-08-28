@@ -8,7 +8,7 @@ let { children } = $props();
 	<title>Biome Ecosystem CI</title>
 	<meta
 		name="description"
-		content="Browse Biome ecosystem CI runs and repository results."
+		content="Trends across Biome ecosystem CI runs."
 	>
 </svelte:head>
 
