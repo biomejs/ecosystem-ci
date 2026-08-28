@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@theme {
+	--text-compact: 0.6875rem;
+	--text-compact--line-height: 1rem;
+	--text-micro: 0.625rem;
+	--text-micro--line-height: 0.875rem;
+	--container-dashboard: 93.75rem;
+	--spacing-dashboard-table: 82.5rem;
+}
+
 /* Dark only. Metric hues validated for contrast and colour-vision deficiency on #121211. */
 @layer base {
 	:root {
@@ -71,6 +80,14 @@
 	.panel {
 		background: var(--surface);
 		border: 1px solid var(--hair);
+	}
+
+	.metric-cell {
+		grid-template-columns: minmax(0, 1fr) 5.5rem;
+	}
+
+	.severity-cell {
+		grid-template-columns: minmax(0, 1fr) 6rem;
 	}
 
 	.eyebrow {

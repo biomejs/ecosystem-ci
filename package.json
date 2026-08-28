@@ -13,5 +13,8 @@
 		"check": "bun run --cwd dashboard check",
 		"reports:import": "bun run --cwd dashboard reports:import",
 		"deploy": "bun run --cwd dashboard deploy"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.11"
 	}
 }

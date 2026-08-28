@@ -10,5 +10,13 @@
 		"parser": {
 			"tailwindDirectives": true
 		}
+	},
+	"linter": {
+		"rules": {
+			"nursery": {
+				"noTailwindArbitraryValue": "error",
+				"useTailwindShorthandClasses": "error"
+			}
+		}
 	}
 }

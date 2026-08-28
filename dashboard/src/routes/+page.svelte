@@ -89,15 +89,15 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 		>
 			{#if last && f}
 				<div class="font-semibold">{m.format(last.value)}</div>
-				<div class="text-[11px] font-semibold" style:color={deltaColor(f)}>
+				<div class="text-compact font-semibold" style:color={deltaColor(f)}>
 					{deltaGlyph(f)} {formatDeltaShort(f.after, f.before, m.key)}
 				</div>
-				<div class="muted text-[10px]">
+				<div class="muted text-micro">
 					{f.kind === "spike" ? "latest run only" : `since ${formatDay(runs[f.at].startedAt)}`}
 				</div>
 			{:else if last}
 				<div class="font-semibold">{m.format(last.value)}</div>
-				<div class="muted text-[11px]">{prev ? formatDeltaShort(last.value, prev.value, m.key) : ""}</div>
+				<div class="muted text-compact">{prev ? formatDeltaShort(last.value, prev.value, m.key) : ""}</div>
 			{:else}
 				<div class="muted">—</div>
 			{/if}
@@ -109,13 +109,13 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 		>
 			{#if hover.index !== null}
 				<div class="font-semibold">{hv === null || hv === undefined ? "—" : m.format(hv)}</div>
-				<div class="muted text-[11px]">{hv === null ? "no report" : formatDay(runs[hover.index].startedAt)}</div>
+				<div class="muted text-compact">{hv === null ? "no report" : formatDay(runs[hover.index].startedAt)}</div>
 			{/if}
 		</div>
 	</div>
 {/snippet}
 
-<main class="mx-auto max-w-[1500px] px-6 py-5">
+<main class="mx-auto max-w-dashboard px-6 py-5">
 	{#if runs.length === 0}
 		<h1 class="text-lg font-semibold">Ecosystem CI trends</h1>
 		<p class="panel mt-3 p-4">No runs have been stored.</p>
@@ -165,23 +165,23 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 		</div>
 
 		<div class="panel overflow-x-auto">
-			<div class="grid min-w-[1320px]" style="grid-template-columns: 12rem repeat(4, minmax(0, 1fr)) minmax(0, 1.2fr)">
+			<div class="grid min-w-dashboard-table" style="grid-template-columns: 12rem repeat(4, minmax(0, 1fr)) minmax(0, 1.2fr)">
 				<div class="border-b px-3 py-2" style="border-color: var(--hair)"></div>
 				{#each METRICS as m}
 					<div class="border-b border-l px-3 py-2" style="border-color: var(--hair)">
 						<div class="flex items-center gap-2">
 							<span class="key" style:background={m.hue}></span>
 							<span class="font-semibold">{m.label}</span>
-							<span class="muted ml-auto whitespace-nowrap text-[11px]">{hovered ? "at run" : "latest · Δ"}</span>
+							<span class="muted ml-auto whitespace-nowrap text-compact">{hovered ? "at run" : "latest · Δ"}</span>
 						</div>
 					</div>
 				{/each}
 				<div class="border-b border-l px-3 py-2" style="border-color: var(--hair)">
 					<div class="flex items-center gap-2 whitespace-nowrap" title={SEVERITY_NOTE}>
 						<span class="font-semibold">By severity</span>
-						<span class="ml-auto flex gap-1.5 text-[11px] ink-2">
+						<span class="ml-auto flex gap-1.5 text-compact ink-2">
 							{#each [...SEVERITIES].reverse() as s}
-								<span class="inline-flex items-center gap-1"><span class="inline-block h-2.5 w-2.5" style:background={s.hue}></span>{s.label}</span>
+								<span class="inline-flex items-center gap-1"><span class="inline-block size-2.5" style:background={s.hue}></span>{s.label}</span>
 							{/each}
 						</span>
 					</div>
@@ -193,7 +193,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 					{@const divider = ri === firstQuiet && ri > 0}
 					<div class="flex flex-col justify-center px-3 py-2" style="border-bottom: 1px solid var(--hair)" style:border-top={divider ? "2px solid var(--base)" : "none"}>
 						<a class="font-medium" href={`https://github.com/${repo.slug}`}>{repo.slug}</a>
-						<span class="muted text-[11px]">
+						<span class="muted text-compact">
 							{#if row.newRegressions.length}{row.newRegressions.length} new{#if row.regressions.length > row.newRegressions.length}, {row.regressions.length - row.newRegressions.length} older{/if}
 							{:else if row.regressions.length}{row.regressions.length} older
 							{:else if repo.cells[repo.cells.length - 1]?.missing}no report in latest run{/if}
@@ -202,7 +202,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 					{#each METRICS as m}
 						{@const vals = seriesValues(repo, m.key)}
 						{@const f = findingFor(repo, m.key)}
-						<div class="grid grid-cols-[minmax(0,1fr)_5.5rem] items-center gap-2 border-l px-2 py-1" style="border-color: var(--hair); border-bottom: 1px solid var(--hair)" style:border-top={divider ? "2px solid var(--base)" : "none"}>
+						<div class="metric-cell grid items-center gap-2 border-l px-2 py-1" style="border-color: var(--hair); border-bottom: 1px solid var(--hair)" style:border-top={divider ? "2px solid var(--base)" : "none"}>
 							<TrendLine
 								{runs}
 								values={vals}
@@ -226,7 +226,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 					{@const latestAt = lastTotal?.index ?? null}
 					{@const latestCell = latestAt === null ? null : repo.cells[latestAt]}
 					{@const hoverCell = hover.index === null ? null : repo.cells[hover.index]}
-					<div class="grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-2 border-l px-2 py-1" style="border-color: var(--hair); border-bottom: 1px solid var(--hair)" style:border-top={divider ? "2px solid var(--base)" : "none"}>
+					<div class="severity-cell grid items-center gap-2 border-l px-2 py-1" style="border-color: var(--hair); border-bottom: 1px solid var(--hair)" style:border-top={divider ? "2px solid var(--base)" : "none"}>
 						<StackedArea
 							{runs}
 							layers={SEVERITIES.map((s) => ({ key: s.key, label: s.label, hue: s.hue, values: seriesValues(repo, s.key) }))}
@@ -242,15 +242,15 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 							>
 								{#if latestCell && !latestCell.missing && latestAt !== null}
 									<div class="font-semibold">{formatCount(totals[latestAt] as number)}</div>
-									<div class="muted text-[11px]">{latestCell.errors} · {latestCell.warnings} · {latestCell.infos}</div>
+									<div class="muted text-compact">{latestCell.errors} · {latestCell.warnings} · {latestCell.infos}</div>
 								{:else}
 									<div class="muted">—</div>
 								{/if}
 								{#if sevFinding}
-									<div class="text-[11px] font-semibold" style:color={deltaColor(sevFinding)}>
+									<div class="text-compact font-semibold" style:color={deltaColor(sevFinding)}>
 										{deltaGlyph(sevFinding)} {formatDeltaShort(sevFinding.after, sevFinding.before, sevFinding.metric.key)} {sevFinding.metric.label.toLowerCase()}
 									</div>
-									<div class="muted text-[10px]">since {formatDay(runs[sevFinding.at].startedAt)}</div>
+									<div class="muted text-micro">since {formatDay(runs[sevFinding.at].startedAt)}</div>
 								{/if}
 							</div>
 							<div
@@ -260,7 +260,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 							>
 								{#if hover.index !== null && hoverCell && !hoverCell.missing}
 									<div class="font-semibold">{formatCount(totals[hover.index] as number)}</div>
-									<div class="muted text-[11px]">{hoverCell.errors} · {hoverCell.warnings} · {hoverCell.infos}</div>
+									<div class="muted text-compact">{hoverCell.errors} · {hoverCell.warnings} · {hoverCell.infos}</div>
 								{:else}
 									<div class="muted">—</div>
 								{/if}
