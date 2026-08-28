@@ -3,12 +3,15 @@
 	"private": true,
 	"packageManager": "bun@1.3.3",
 	"type": "module",
-	"workspaces": ["dashboard"],
+	"workspaces": [
+		"dashboard"
+	],
 	"scripts": {
-		"test": "node --experimental-strip-types --test test/aggregate-outcomes.test.ts",
+		"test": "node --experimental-strip-types --test test/*.test.ts",
 		"dev": "bun run --cwd dashboard dev",
 		"build": "bun run --cwd dashboard build",
 		"check": "bun run --cwd dashboard check",
+		"reports:import": "bun run --cwd dashboard reports:import",
 		"deploy": "bun run --cwd dashboard deploy"
 	}
 }
