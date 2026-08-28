@@ -1,15 +1,15 @@
 <script lang="ts">
-	import '../app.css';
+import "../app.css";
 
-	let { children } = $props();
+let { children } = $props();
 </script>
 
 <svelte:head>
 	<title>Biome Ecosystem CI</title>
 	<meta
 		name="description"
-		content="Explore Biome ecosystem CI runs, regressions, and project health."
-	/>
+		content="Browse Biome ecosystem CI runs and repository results."
+	>
 </svelte:head>
 
 {@render children()}

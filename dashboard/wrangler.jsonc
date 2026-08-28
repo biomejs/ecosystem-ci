@@ -18,5 +18,11 @@
 			"database_id": "local",
 			"migrations_dir": "migrations"
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "REPORTS",
+			"bucket_name": "biome-ecosystem-ci-reports"
+		}
 	]
 }
