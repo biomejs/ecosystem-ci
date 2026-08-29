@@ -212,12 +212,10 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 					{@const lastRow = ri === rows.length - 1}
 					{@const divider = ri === firstQuiet && ri > 0}
 					<div class="flex flex-col justify-center px-3 py-2" style="border-bottom: 1px solid var(--hair)" style:border-top={divider ? "2px solid var(--base)" : "none"}>
-						<a class="font-medium" href={`https://github.com/${repo.slug}`}>{repo.slug}</a>
-						<span class="muted text-compact">
-							{#if row.newRegressions.length}{row.newRegressions.length} new{#if row.regressions.length > row.newRegressions.length}, {row.regressions.length - row.newRegressions.length} older{/if}
-							{:else if row.regressions.length}{row.regressions.length} older
-							{:else if repo.cells[repo.cells.length - 1]?.missing}no report in latest run{/if}
-						</span>
+						<a class="wrap-anywhere font-medium" href={`https://github.com/${repo.slug}`}>{repo.slug}</a>
+						{#if repo.cells[repo.cells.length - 1]?.missing}
+							<span class="muted text-compact">no report in latest run</span>
+						{/if}
 					</div>
 					{#each METRICS as m}
 						{@const vals = seriesValues(repo, m.key)}
