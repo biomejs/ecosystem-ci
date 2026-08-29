@@ -3,6 +3,7 @@ node_modules/
 .svelte-kit/
 build/
 .wrangler/
+/dashboard/data/reports/
 .env
 .env.*
 !.env.example
