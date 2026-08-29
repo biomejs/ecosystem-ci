@@ -3,6 +3,8 @@ interface LinearDomainOptions {
 	zeroBased?: boolean;
 	/** Minimum domain width as a multiple of the baseline or median sample. */
 	softRelativeSpan?: number | null;
+	/** Minimum domain width in the metric's native unit. */
+	minimumSpan?: number | null;
 	padding?: number;
 }
 
@@ -21,6 +23,7 @@ export function linearDomain(
 		baseline = null,
 		zeroBased = false,
 		softRelativeSpan = null,
+		minimumSpan = null,
 		padding = 0.14,
 	}: LinearDomainOptions = {},
 ): [number, number] {
@@ -39,17 +42,33 @@ export function linearDomain(
 	const dataPadding = (high - low) * padding;
 	let domainLow = zeroBased ? 0 : low - dataPadding;
 	let domainHigh = high + dataPadding;
+	const reference =
+		baseline !== null && baseline > 0
+			? baseline
+			: median(samples.filter((value) => value > 0));
 
 	if (softRelativeSpan !== null && softRelativeSpan > 0) {
-		const reference =
-			baseline !== null && baseline > 0
-				? baseline
-				: median(samples.filter((value) => value > 0));
 		if (reference !== null) {
 			const halfSpan = (reference * softRelativeSpan) / 2;
 			domainLow = Math.max(0, Math.min(domainLow, reference - halfSpan));
 			domainHigh = Math.max(domainHigh, reference + halfSpan);
 		}
+	}
+
+	if (
+		minimumSpan !== null &&
+		minimumSpan > 0 &&
+		domainHigh - domainLow < minimumSpan
+	) {
+		const center = reference ?? (domainLow + domainHigh) / 2;
+		let suggestedLow = center - minimumSpan / 2;
+		let suggestedHigh = center + minimumSpan / 2;
+		if (defined.every((value) => value >= 0) && suggestedLow < 0) {
+			suggestedHigh -= suggestedLow;
+			suggestedLow = 0;
+		}
+		domainLow = Math.min(domainLow, suggestedLow);
+		domainHigh = Math.max(domainHigh, suggestedHigh);
 	}
 
 	return [domainLow, domainHigh];

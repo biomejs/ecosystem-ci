@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 const DEFAULT_REPOSITORY = "biomejs/ecosystem-ci";
 const DEFAULT_WORKFLOW = "ecosystem-ci.yml";
 const REPORT_PREFIX = "biome-report-";
+const CANDIDATE_REPORT_PREFIX = "candidate-report-";
 const REPORT_RETENTION_DAYS = 10;
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
@@ -81,6 +82,12 @@ interface GitHubArtifact {
 	name: string;
 	expired: boolean;
 	archive_download_url: string;
+}
+
+interface ReportArtifact {
+	artifact: GitHubArtifact;
+	id: string;
+	filename: string;
 }
 
 interface GitHubWorkflow {
@@ -246,6 +253,18 @@ export function isValidReport(report: Report): boolean {
 		typeof report.summary.warnings === "number" &&
 		Array.isArray(report.diagnostics)
 	);
+}
+
+export function parseReportArtifactName(
+	artifactName: string,
+): { id: string; filename: string } | null {
+	for (const prefix of [REPORT_PREFIX, CANDIDATE_REPORT_PREFIX]) {
+		if (!artifactName.startsWith(prefix)) continue;
+		const id = artifactName.slice(prefix.length);
+		if (!id) return null;
+		return { id, filename: `${REPORT_PREFIX}${id}.json` };
+	}
+	return null;
 }
 
 export function mergeRuns(
@@ -605,19 +624,17 @@ async function prepareRun(
 		);
 	}
 
-	const artifacts: GitHubArtifact[] = [];
-	const artifactNames = new Set<string>();
+	const artifactsById = new Map<string, ReportArtifact>();
 	for (const artifact of artifactsResponse.artifacts) {
-		if (
-			artifact.expired ||
-			!artifact.name.startsWith(REPORT_PREFIX) ||
-			artifactNames.has(artifact.name)
-		) {
-			continue;
-		}
-		artifactNames.add(artifact.name);
-		artifacts.push(artifact);
+		if (artifact.expired) continue;
+		const parsed = parseReportArtifactName(artifact.name);
+		if (!parsed) continue;
+
+		const existing = artifactsById.get(parsed.id);
+		if (existing?.artifact.name.startsWith(REPORT_PREFIX)) continue;
+		artifactsById.set(parsed.id, { artifact, ...parsed });
 	}
+	const artifacts = [...artifactsById.values()];
 	if (artifacts.length === 0) {
 		console.log(`Skipping run ${runId}: no retained report artifacts.`);
 		return null;
@@ -631,34 +648,37 @@ async function prepareRun(
 	await mkdir(stagingDirectory, { recursive: true });
 	stagingDirectories.add(stagingDirectory);
 
-	const downloaded = await mapLimit(artifacts, 6, async (artifact, index) => {
-		const id = artifact.name.slice(REPORT_PREFIX.length);
-		const target = targetById.get(id);
-		if (!target) {
-			console.warn(`Skipping unknown artifact ${artifact.name}.`);
-			return null;
-		}
+	const downloaded = await mapLimit(
+		artifacts,
+		6,
+		async (reportArtifact, index) => {
+			const { artifact, id, filename } = reportArtifact;
+			const target = targetById.get(id);
+			if (!target) {
+				console.warn(`Skipping unknown artifact ${artifact.name}.`);
+				return null;
+			}
 
-		const zipPath = join(temporaryDirectory, `${runId}-${index}.zip`);
-		const extractDirectory = join(temporaryDirectory, `${runId}-${index}`);
-		await mkdir(extractDirectory, { recursive: true });
-		await downloadArtifact(options.repository, runId, artifact, zipPath);
-		await runCommand(["unzip", "-oq", zipPath, "-d", extractDirectory]);
+			const zipPath = join(temporaryDirectory, `${runId}-${index}.zip`);
+			const extractDirectory = join(temporaryDirectory, `${runId}-${index}`);
+			await mkdir(extractDirectory, { recursive: true });
+			await downloadArtifact(options.repository, runId, artifact, zipPath);
+			await runCommand(["unzip", "-oq", zipPath, "-d", extractDirectory]);
 
-		const filename = `${artifact.name}.json`;
-		const source = await findFile(extractDirectory, filename);
-		if (!source)
-			throw new Error(`${filename} was not present in ${artifact.name}`);
-		const report = JSON.parse(await readFile(source, "utf8")) as Report;
-		if (!isValidReport(report)) {
-			console.log(
-				`Ignoring ${artifact.name}: CI did not produce a valid report.`,
-			);
-			return null;
-		}
-		await copyFile(source, join(stagingDirectory, filename));
-		return target;
-	});
+			const source = await findFile(extractDirectory, filename);
+			if (!source)
+				throw new Error(`${filename} was not present in ${artifact.name}`);
+			const report = JSON.parse(await readFile(source, "utf8")) as Report;
+			if (!isValidReport(report)) {
+				console.log(
+					`Ignoring ${artifact.name}: CI did not produce a valid report.`,
+				);
+				return null;
+			}
+			await copyFile(source, join(stagingDirectory, filename));
+			return target;
+		},
+	);
 
 	const validTargetIds = new Set(
 		downloaded

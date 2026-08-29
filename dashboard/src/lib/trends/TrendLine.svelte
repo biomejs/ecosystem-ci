@@ -16,6 +16,7 @@ let {
 	axis = "none",
 	baseline = null,
 	softRelativeSpan = null,
+	minimumSpan = null,
 	markers = [],
 	ariaLabel,
 }: {
@@ -31,6 +32,8 @@ let {
 	baseline?: number | null;
 	/** minimum y-domain width as a multiple of the baseline or median sample */
 	softRelativeSpan?: number | null;
+	/** minimum y-domain width in the metric's native unit */
+	minimumSpan?: number | null;
 	/** run indices to mark with a vertical line */
 	markers?: number[];
 	ariaLabel: string;
@@ -47,7 +50,7 @@ const pw = $derived(Math.max(10, width - m.left - m.right));
 const ph = $derived(height - m.top - m.bottom);
 
 const domain = $derived(
-	linearDomain(values, { baseline, zeroBased, softRelativeSpan }),
+	linearDomain(values, { baseline, zeroBased, softRelativeSpan, minimumSpan }),
 );
 const ticks = $derived(
 	niceTicks(domain[0], domain[1], 3).filter(

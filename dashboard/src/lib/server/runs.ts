@@ -56,8 +56,25 @@ interface HistoryPointRow {
 	panics: number;
 }
 
+interface BranchRow {
+	biome_branch: string;
+}
+
+export async function listBiomeBranches(db: D1Database): Promise<string[]> {
+	const { results } = await db
+		.prepare(
+			`SELECT biome_branch
+			FROM runs
+			GROUP BY biome_branch
+			ORDER BY biome_branch = 'main' DESC, MAX(started_at) DESC`,
+		)
+		.all<BranchRow>();
+	return results.map((row) => row.biome_branch);
+}
+
 export async function listRecentRuns(
 	db: D1Database,
+	biomeBranch: string,
 	limit = 20,
 ): Promise<RunSummary[]> {
 	const { results } = await db
@@ -75,11 +92,12 @@ export async function listRecentRuns(
 				SUM(CASE WHEN rr.check_outcome = 'failed' THEN 1 ELSE 0 END) AS failed
 			FROM runs r
 			LEFT JOIN repository_results rr ON rr.run_id = r.github_run_id
+			WHERE r.biome_branch = ?
 			GROUP BY r.github_run_id
 			ORDER BY r.started_at DESC
 			LIMIT ?`,
 		)
-		.bind(Math.min(Math.max(limit, 1), 100))
+		.bind(biomeBranch, Math.min(Math.max(limit, 1), 100))
 		.all<RunRow>();
 
 	return results.map((row) => ({

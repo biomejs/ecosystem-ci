@@ -2,6 +2,290 @@
 	"workflow": "biomejs/ecosystem-ci/.github/workflows/ecosystem-ci.yml",
 	"runs": [
 		{
+			"githubRunId": 33263356561,
+			"runAttempt": 1,
+			"biomeBranch": "dyc3/fix-no-floating-promises-things",
+			"biomeCommitSha": "8a0aba2bd0499fcab8594560f89053f7172ac1af",
+			"startedAt": "2026-08-29T16:34:49Z",
+			"completedAt": "2026-08-29T16:48:06Z",
+			"status": "completed",
+			"results": [
+				{
+					"repositorySlug": "django/django",
+					"repositoryCommitSha": "439b936753e5a679ffcf40cff5918c5637f7c72b",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:41Z",
+					"report": "reports/33263356561/biome-report-django.json"
+				},
+				{
+					"repositorySlug": "withastro/astro",
+					"repositoryCommitSha": "7c04f2edadbf05f311a0f7273a43d46e827c633e",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:42Z",
+					"report": "reports/33263356561/biome-report-astro.json"
+				},
+				{
+					"repositorySlug": "CherryHQ/cherry-studio",
+					"repositoryCommitSha": "44b37379c28c30b6b8ed64409e29b2ece54113c2",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:47:06Z",
+					"report": "reports/33263356561/biome-report-cherry-studio.json"
+				},
+				{
+					"repositorySlug": "novuhq/novu",
+					"repositoryCommitSha": "56a8a168f83069d1b336a7189da6a3546fd2947d",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:47Z",
+					"report": "reports/33263356561/biome-report-novu.json"
+				},
+				{
+					"repositorySlug": "discordjs/discord.js",
+					"repositoryCommitSha": "a81ed8a306d37fdc746e26a634b6a42164ba2c8c",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:43Z",
+					"report": "reports/33263356561/biome-report-discordjs.json"
+				},
+				{
+					"repositorySlug": "promptfoo/promptfoo",
+					"repositoryCommitSha": "4fb96412eff44ced9c47293238d3db0450a39353",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:47:05Z",
+					"report": "reports/33263356561/biome-report-promptfoo.json"
+				},
+				{
+					"repositorySlug": "elizaOS/eliza",
+					"repositoryCommitSha": "2a4af7351c96881b83333fabb37927222dbb09fd",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:47:31Z",
+					"report": "reports/33263356561/biome-report-eliza.json"
+				},
+				{
+					"repositorySlug": "oblador/react-native-vector-icons",
+					"repositoryCommitSha": "9406d84ac61bb152b0e38c1a9cb4f389d1623503",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:41Z",
+					"report": "reports/33263356561/biome-report-react-native-vector-icons.json"
+				},
+				{
+					"repositorySlug": "vercel/vercel",
+					"repositoryCommitSha": "e06cc643cec6a47bd9344af7f4589c736d95ed15",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:46Z",
+					"report": "reports/33263356561/biome-report-vercel.json"
+				},
+				{
+					"repositorySlug": "midday-ai/midday",
+					"repositoryCommitSha": "51587319f26a0ffaa9dfccab1920373cb65689b7",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:41Z",
+					"report": "reports/33263356561/biome-report-midday.json"
+				},
+				{
+					"repositorySlug": "coder/coder",
+					"repositoryCommitSha": "8bf271c5030fdc0cd06ab1d3c0f5714712a1c8d5",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:59Z",
+					"report": "reports/33263356561/biome-report-coder.json"
+				},
+				{
+					"repositorySlug": "baptisteArno/typebot.io",
+					"repositoryCommitSha": "4bc37a4b5befe07de1739f5d52d8d1e7c05dcc9b",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:44Z",
+					"report": "reports/33263356561/biome-report-typebot.json"
+				},
+				{
+					"repositorySlug": "cosscom/coss",
+					"repositoryCommitSha": "4ebe375c04cc574dc2eaade2380b3cf9a48fceaa",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:42Z",
+					"report": "reports/33263356561/biome-report-coss.json"
+				},
+				{
+					"repositorySlug": "superset-sh/superset",
+					"repositoryCommitSha": "240f6e28cdb24409799df9628257c48a601c26a7",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:48Z",
+					"report": "reports/33263356561/biome-report-superset.json"
+				},
+				{
+					"repositorySlug": "microsoft/fast",
+					"repositoryCommitSha": "a909e87e5b2d5da069469823e9665553a8a5a325",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:41Z",
+					"report": "reports/33263356561/biome-report-fast.json"
+				},
+				{
+					"repositorySlug": "mrousavy/react-native-vision-camera",
+					"repositoryCommitSha": "91bae1f08d549b50444ee16661dc4f4375cba0b6",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:41Z",
+					"report": "reports/33263356561/biome-report-react-native-vision-camera.json"
+				},
+				{
+					"repositorySlug": "nhost/nhost",
+					"repositoryCommitSha": "d668c77b3fdd2a7689b42df056f4cb10a7557e66",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:54Z",
+					"report": "reports/33263356561/biome-report-nhost.json"
+				},
+				{
+					"repositorySlug": "podman-desktop/podman-desktop",
+					"repositoryCommitSha": "121e307f580fc8cbbadb25334dcbf269c91756d2",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:58Z",
+					"report": "reports/33263356561/biome-report-podman-desktop.json"
+				},
+				{
+					"repositorySlug": "anyproto/anytype-ts",
+					"repositoryCommitSha": "37e96d99f3574c84e91f29d37fc16e5fb9df8bc5",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:43Z",
+					"report": "reports/33263356561/biome-report-anytype-ts.json"
+				},
+				{
+					"repositorySlug": "wevm/wagmi",
+					"repositoryCommitSha": "6add6193b501f0d1773e5999b0858b5cae9e856e",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:40Z",
+					"report": "reports/33263356561/biome-report-wagmi.json"
+				},
+				{
+					"repositorySlug": "stagewise-io/stagewise",
+					"repositoryCommitSha": "18ac8a27b18c5de4e2d76d03b515cf10186631ca",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:42Z",
+					"report": "reports/33263356561/biome-report-stagewise.json"
+				},
+				{
+					"repositorySlug": "vikejs/vike",
+					"repositoryCommitSha": "862898c855693ff066f5df9414debc1b1f4308f5",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:41Z",
+					"report": "reports/33263356561/biome-report-vike.json"
+				},
+				{
+					"repositorySlug": "rivet-dev/rivet",
+					"repositoryCommitSha": "b5cac54a50103c0739b618f519ce32778119c3b4",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:43Z",
+					"report": "reports/33263356561/biome-report-rivet.json"
+				},
+				{
+					"repositorySlug": "chakra-ui/ark",
+					"repositoryCommitSha": "d1af1a6419bfc6f088fb8f6f572da8e7acf408f1",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:41Z",
+					"report": "reports/33263356561/biome-report-ark.json"
+				},
+				{
+					"repositorySlug": "web-infra-dev/modern.js",
+					"repositoryCommitSha": "2f4d9c4559e26209a0d77f02c6757f29fe3699a2",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:39Z",
+					"report": "reports/33263356561/biome-report-modern-js.json"
+				},
+				{
+					"repositorySlug": "microsoft/FluidFramework",
+					"repositoryCommitSha": "ac7d1a3bfc9fd5da9a459549286562f23e56096e",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:55Z",
+					"report": "reports/33263356561/biome-report-FluidFramework.json"
+				},
+				{
+					"repositorySlug": "freelensapp/freelens",
+					"repositoryCommitSha": "db7bc60a596aa645b5a334b167aec910a6356274",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:41Z",
+					"report": "reports/33263356561/biome-report-freelens.json"
+				},
+				{
+					"repositorySlug": "EpicenterHQ/epicenter",
+					"repositoryCommitSha": "83beed8e14a9e78581ce3109f26146f42336da95",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:42Z",
+					"report": "reports/33263356561/biome-report-epicenter.json"
+				},
+				{
+					"repositorySlug": "pollinations/pollinations",
+					"repositoryCommitSha": "db1982d5373b97d5c27c9a5650430d42ad792c38",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:42Z",
+					"report": "reports/33263356561/biome-report-pollinations.json"
+				},
+				{
+					"repositorySlug": "fern-api/fern",
+					"repositoryCommitSha": "b5df1878ed86330b9ccb1f764bdfc136c29c5d94",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:54Z",
+					"report": "reports/33263356561/biome-report-fern.json"
+				},
+				{
+					"repositorySlug": "material-extensions/vscode-material-icon-theme",
+					"repositoryCommitSha": "dbdaf3dec361471986530da138053538dfce9d6a",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:40Z",
+					"report": "reports/33263356561/biome-report-vscode-material-icon-theme.json"
+				},
+				{
+					"repositorySlug": "scverse/scanpy",
+					"repositoryCommitSha": "a656a33b080a5c1f64b01e841daad76f35f5ec5f",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:40Z",
+					"report": "reports/33263356561/biome-report-scanpy.json"
+				},
+				{
+					"repositorySlug": "indico/indico",
+					"repositoryCommitSha": "9fadd1dd6e1494a01081c459ff476d0b48001641",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:40Z",
+					"report": "reports/33263356561/biome-report-indico.json"
+				},
+				{
+					"repositorySlug": "ParabolInc/parabol",
+					"repositoryCommitSha": "21310c943c4c7161bce2961488c96878632da5f2",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:41Z",
+					"report": "reports/33263356561/biome-report-parabol.json"
+				},
+				{
+					"repositorySlug": "crbnos/carbon",
+					"repositoryCommitSha": "93e7c40f34fb399b6e4daa862e570ec8d2f70051",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:53Z",
+					"report": "reports/33263356561/biome-report-carbon.json"
+				},
+				{
+					"repositorySlug": "c15t/c15t",
+					"repositoryCommitSha": "a7e867198257e2cdef2caed0c4fe4582c79f7efc",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:47:38Z",
+					"report": "reports/33263356561/biome-report-c15t.json"
+				},
+				{
+					"repositorySlug": "dyc3/opentogethertube",
+					"repositoryCommitSha": "4e3f7a4ec68a0e0613de3622c340f898c9806d4b",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:39Z",
+					"report": "reports/33263356561/biome-report-opentogethertube.json"
+				},
+				{
+					"repositorySlug": "prisma/prisma-next",
+					"repositoryCommitSha": "55458c441d2cf452028c22eed21370447720840a",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:43Z",
+					"report": "reports/33263356561/biome-report-prisma-next.json"
+				},
+				{
+					"repositorySlug": "Byline-CMS/bylinecms.dev",
+					"repositoryCommitSha": "c27ada93adff84c0155553d8fee1de5fdff237a4",
+					"jobStartedAt": "2026-08-29T16:46:23Z",
+					"jobCompletedAt": "2026-08-29T16:46:40Z",
+					"report": "reports/33263356561/biome-report-byline-cms.json"
+				}
+			]
+		},
+		{
 			"githubRunId": 33193506807,
 			"runAttempt": 1,
 			"biomeBranch": "main",

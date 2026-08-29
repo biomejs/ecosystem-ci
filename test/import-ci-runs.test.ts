@@ -6,6 +6,7 @@ import {
 	type ManifestRun,
 	mergeRuns,
 	parseArguments,
+	parseReportArtifactName,
 	parseWorkflowTargets,
 	selectUnimportedRunIds,
 } from "../dashboard/scripts/import-ci-runs.ts";
@@ -98,6 +99,18 @@ test("isValidReport rejects CI error placeholders", () => {
 		}),
 		true,
 	);
+});
+
+test("parseReportArtifactName accepts main and candidate reports", () => {
+	assert.deepEqual(parseReportArtifactName("biome-report-astro"), {
+		id: "astro",
+		filename: "biome-report-astro.json",
+	});
+	assert.deepEqual(parseReportArtifactName("candidate-report-astro"), {
+		id: "astro",
+		filename: "biome-report-astro.json",
+	});
+	assert.equal(parseReportArtifactName("outcome-astro"), null);
 });
 
 test("mergeRuns replaces matching IDs and sorts newest first", () => {

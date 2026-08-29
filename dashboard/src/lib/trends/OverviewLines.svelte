@@ -11,6 +11,7 @@ let {
 	title,
 	hue,
 	format,
+	minimumAbsoluteSpan = 0,
 }: {
 	runs: Run[];
 	repos: Repo[];
@@ -18,6 +19,7 @@ let {
 	title: string;
 	hue: string;
 	format: (value: number) => string;
+	minimumAbsoluteSpan?: number;
 } = $props();
 
 let width = $state(600);
@@ -58,17 +60,26 @@ const allValues = $derived(
 	),
 );
 const domain = $derived.by((): [number, number] => {
-	if (allValues.length === 0) return logarithmic ? [1, 10] : [0, 1];
+	if (allValues.length === 0) {
+		if (relative) return [0, 1];
+		return logarithmic
+			? [1, Math.max(10, 1 + minimumAbsoluteSpan)]
+			: [0, Math.max(1, minimumAbsoluteSpan)];
+	}
 	const low = Math.min(...allValues);
 	const high = Math.max(...allValues);
 	if (logarithmic) {
 		const lowPower = Math.floor(Math.log10(low));
 		const highPower = Math.ceil(Math.log10(high));
-		return lowPower === highPower
+		const logarithmicDomain: [number, number] = lowPower === highPower
 			? [10 ** (lowPower - 1), 10 ** (highPower + 1)]
 			: [10 ** lowPower, 10 ** highPower];
+		if (logarithmicDomain[1] - logarithmicDomain[0] < minimumAbsoluteSpan) {
+			logarithmicDomain[1] = logarithmicDomain[0] + minimumAbsoluteSpan;
+		}
+		return logarithmicDomain;
 	}
-	if (!relative) return [0, Math.max(1, high) * 1.08];
+	if (!relative) return [0, Math.max(minimumAbsoluteSpan, Math.max(1, high) * 1.08)];
 	if (low === high) {
 		const padding = Math.abs(low) * 0.1 || 1;
 		return [low - padding, high + padding];
