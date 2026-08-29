@@ -1,5 +1,11 @@
 import type { RepositoryComparison, RunObservation } from "./types";
 
+const MIN_TIMING_PERCENT = 20;
+const MIN_CHECK_CHANGE_MS = 25;
+const MIN_SCANNER_CHANGE_MS = 10;
+const MIN_DIAGNOSTIC_PERCENT = 5;
+const MIN_DIAGNOSTIC_COUNT = 10;
+
 export function percentDelta(
 	base: number | null,
 	head: number | null,
@@ -38,22 +44,63 @@ export function diagnosticDelta(row: RepositoryComparison): number {
 	return diagnosticTotal(row.head) - diagnosticTotal(row.base);
 }
 
+function timingSignal(
+	base: number | null,
+	head: number | null,
+	minimumChangeMs: number,
+): number {
+	if (base === null || head === null) return 0;
+	const percentage = percentDelta(base, head);
+	if (
+		percentage === null ||
+		Math.abs(percentage) < MIN_TIMING_PERCENT ||
+		Math.abs(head - base) < minimumChangeMs
+	) {
+		return 0;
+	}
+	return Math.sign(head - base);
+}
+
+function diagnosticSignal(row: RepositoryComparison): number {
+	const base = diagnosticTotal(row.base);
+	const head = diagnosticTotal(row.head);
+	const count = head - base;
+	const percentage = relativeDelta(base, head);
+	if (
+		Math.abs(count) < MIN_DIAGNOSTIC_COUNT ||
+		Math.abs(percentage) < MIN_DIAGNOSTIC_PERCENT
+	) {
+		return 0;
+	}
+	return Math.sign(count);
+}
+
 export function reviewKind(
 	row: RepositoryComparison,
 ): "better" | "quiet" | "worse" {
-	const check = percentDelta(row.base.checkMs, row.head.checkMs) ?? 0;
-	const diagnostics = diagnosticDelta(row);
-	const panics = row.head.panics - row.base.panics;
-	if (panics > 0 || diagnostics > 0 || check > 10) return "worse";
-	if (panics < 0 || diagnostics < 0 || check < -10) return "better";
+	const signals = [
+		timingSignal(row.base.checkMs, row.head.checkMs, MIN_CHECK_CHANGE_MS),
+		timingSignal(row.base.scannerMs, row.head.scannerMs, MIN_SCANNER_CHANGE_MS),
+		diagnosticSignal(row),
+		Math.sign(row.head.panics - row.base.panics),
+	];
+	if (signals.some((signal) => signal > 0)) return "worse";
+	if (signals.some((signal) => signal < 0)) return "better";
 	return "quiet";
 }
 
 export function impact(row: RepositoryComparison): number {
 	const check = Math.abs(percentDelta(row.base.checkMs, row.head.checkMs) ?? 0);
+	const scanner = Math.abs(
+		percentDelta(row.base.scannerMs, row.head.scannerMs) ?? 0,
+	);
+	const diagnostics = Math.abs(
+		relativeDelta(diagnosticTotal(row.base), diagnosticTotal(row.head)),
+	);
 	return (
-		Math.abs(diagnosticDelta(row)) * 20 +
 		Math.abs(row.head.panics - row.base.panics) * 100 +
-		check
+		check +
+		scanner +
+		diagnostics
 	);
 }
