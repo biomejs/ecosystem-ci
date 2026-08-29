@@ -4,6 +4,7 @@
 // its chart and a coloured ▲/▼ delta vs baseline; small deltas stay plain.
 // Repositories with a new regression sort to the top.
 import StackedArea from "$lib/trends/StackedArea.svelte";
+import OverviewLines from "$lib/trends/OverviewLines.svelte";
 import TrendLine from "$lib/trends/TrendLine.svelte";
 import {
 	METRICS,
@@ -148,6 +149,25 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				</label>
 			</div>
 		</header>
+
+		<div class="mb-3 grid gap-3 lg:grid-cols-2">
+			<OverviewLines
+				{runs}
+				repos={dataset.repos}
+				metric="checkMs"
+				title="Check time across repositories"
+				hue="var(--blue)"
+				format={METRICS[0].format}
+			/>
+			<OverviewLines
+				{runs}
+				repos={dataset.repos}
+				metric="scannerMs"
+				title="Scanner time across repositories"
+				hue="var(--violet)"
+				format={METRICS[1].format}
+			/>
+		</div>
 
 		<div class="panel mb-3 flex min-h-9 flex-wrap items-center gap-x-4 px-3 py-1.5 text-xs" aria-live="polite">
 			{#if hovered}
