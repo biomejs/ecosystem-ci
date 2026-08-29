@@ -13,6 +13,7 @@ import {
 	SEVERITY_NOTE,
 	buildDataset,
 	formatDeltaShort,
+	isTime,
 	lastDefined,
 	seriesValues,
 	severityTotals,
@@ -228,6 +229,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 								format={m.format}
 								zeroBased={m.zeroBased}
 								baseline={f ? f.before : null}
+								softRelativeSpan={isTime(m.key) ? 1 : null}
 								markers={f ? [f.at] : []}
 								height={lastRow ? 74 : 60}
 								axis={lastRow ? "dates" : "none"}

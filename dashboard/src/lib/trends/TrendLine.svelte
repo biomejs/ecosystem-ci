@@ -2,6 +2,7 @@
 // One metric for one repository. A detected change is drawn as the baseline (grey
 // hairline) and the change point (vertical marker in the metric's hue).
 import type { Run } from "./data";
+import { linearDomain } from "./domain";
 import { formatDay, niceTicks } from "./format";
 import { hover } from "./hover.svelte";
 
@@ -14,6 +15,7 @@ let {
 	height = 60,
 	axis = "none",
 	baseline = null,
+	softRelativeSpan = null,
 	markers = [],
 	ariaLabel,
 }: {
@@ -27,6 +29,8 @@ let {
 	axis?: "dates" | "none";
 	/** pre-change level, drawn as a grey hairline */
 	baseline?: number | null;
+	/** minimum y-domain width as a multiple of the baseline or median sample */
+	softRelativeSpan?: number | null;
 	/** run indices to mark with a vertical line */
 	markers?: number[];
 	ariaLabel: string;
@@ -42,23 +46,9 @@ const m = $derived({
 const pw = $derived(Math.max(10, width - m.left - m.right));
 const ph = $derived(height - m.top - m.bottom);
 
-const defined = $derived(
-	values
-		.filter((v): v is number => v !== null)
-		.concat(baseline === null ? [] : [baseline]),
+const domain = $derived(
+	linearDomain(values, { baseline, zeroBased, softRelativeSpan }),
 );
-const domain = $derived.by((): [number, number] => {
-	if (defined.length === 0) return [0, 1];
-	let lo = Math.min(...defined);
-	let hi = Math.max(...defined);
-	if (zeroBased) lo = 0;
-	if (hi === lo) {
-		hi = lo === 0 ? 1 : lo * 1.1;
-		lo = lo === 0 ? 0 : lo * 0.9;
-	}
-	const pad = (hi - lo) * 0.14;
-	return [zeroBased ? 0 : lo - pad, hi + pad];
-});
 const ticks = $derived(
 	niceTicks(domain[0], domain[1], 3).filter(
 		(v) => !zeroBased || Number.isInteger(v),
