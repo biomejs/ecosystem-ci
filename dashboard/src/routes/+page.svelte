@@ -145,6 +145,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				</p>
 			</div>
 			<div class="flex flex-wrap items-center gap-3 text-xs">
+				<a class="panel px-2 py-1" href="/compare">Compare runs</a>
 				<form method="GET">
 					<label class="flex items-center gap-2">
 						<span class="eyebrow">Biome branch</span>
