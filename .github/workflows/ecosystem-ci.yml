@@ -64,88 +64,130 @@ jobs:
           # - arguments: extra arguments to pass to the `biome check` command (default is `.`)
           - id: django
             repository: django/django
+            ref: 73cc09f14f13fedddc14d6ba5b287cb33c24e4a4
           - id: cline
             repository: cline/cline
+            ref: 48d63852745460ff0fa3dfcc0457bbe2493841de
           - id: astro
             repository: withastro/astro
+            ref: 19dae210d42bd22662ee678c173676573b6168f2
           - id: cherry-studio
             repository: CherryHQ/cherry-studio
+            ref: f24fc324a7a4932284e4cadb96944d29980cbcf4
           - id: novu
             repository: novuhq/novu
+            ref: 50597bd3874dc28616cd5a21eadf7d07a33ce5ae
           - id: discordjs
             repository: discordjs/discord.js
+            ref: 10f059e3ca0d3b1c9024da0e1baa81a795288230
           - id: promptfoo
             repository: promptfoo/promptfoo
+            ref: 9cd19241a0706fcf59dd609167f4218612fc4beb
           - id: eliza
             repository: elizaOS/eliza
+            ref: 29bed1bb394a2c0c7c0df6dc12babbe28667efbe
           - id: react-native-vector-icons
             repository: oblador/react-native-vector-icons
+            ref: 9406d84ac61bb152b0e38c1a9cb4f389d1623503
           - id: vercel
             repository: vercel/vercel
+            ref: e06cc643cec6a47bd9344af7f4589c736d95ed15
           - id: midday
             repository: midday-ai/midday
+            ref: 51587319f26a0ffaa9dfccab1920373cb65689b7
           - id: coder
             repository: coder/coder
+            ref: d6b67e8e31574d8164f3a33330c103a07e16dc19
           - id: ten-framework
             repository: TEN-framework/ten-framework
+            ref: 84ad09df7883f98a8eb446aa34bdf22ff96c64a9
           - id: typebot
             repository: baptisteArno/typebot.io
+            ref: 4bc37a4b5befe07de1739f5d52d8d1e7c05dcc9b
           - id: coss
             repository: cosscom/coss
+            ref: 4ebe375c04cc574dc2eaade2380b3cf9a48fceaa
           - id: superset
             repository: superset-sh/superset
+            ref: bfc68940b1b10bce61a435a8957101b3b9d06b04
           - id: fast
             repository: microsoft/fast
+            ref: a909e87e5b2d5da069469823e9665553a8a5a325
           - id: react-native-vision-camera
             repository: mrousavy/react-native-vision-camera
+            ref: 91bae1f08d549b50444ee16661dc4f4375cba0b6
           - id: nhost
             repository: nhost/nhost
+            ref: 5d11ad32ea3c6d5c1a7d0575443911bfbeb38518
           - id: podman-desktop
             repository: podman-desktop/podman-desktop
+            ref: 121e307f580fc8cbbadb25334dcbf269c91756d2
           - id: anytype-ts
             repository: anyproto/anytype-ts
+            ref: 8b1ef4e4df49ee203bcb5f13c8042bc3c9259d82
           - id: wagmi
             repository: wevm/wagmi
+            ref: 6add6193b501f0d1773e5999b0858b5cae9e856e
           - id: stagewise
             repository: stagewise-io/stagewise
+            ref: 18ac8a27b18c5de4e2d76d03b515cf10186631ca
           - id: vike
             repository: vikejs/vike
+            ref: 862898c855693ff066f5df9414debc1b1f4308f5
           - id: rivet
             repository: rivet-dev/rivet
+            ref: b5cac54a50103c0739b618f519ce32778119c3b4
           - id: ark
             repository: chakra-ui/ark
+            ref: d1af1a6419bfc6f088fb8f6f572da8e7acf408f1
           - id: modern-js
             repository: web-infra-dev/modern.js
+            ref: 2f4d9c4559e26209a0d77f02c6757f29fe3699a2
           - id: FluidFramework
             repository: microsoft/FluidFramework
+            ref: ac7d1a3bfc9fd5da9a459549286562f23e56096e
           - id: freelens
             repository: freelensapp/freelens
+            ref: db7bc60a596aa645b5a334b167aec910a6356274
           - id: epicenter
             repository: EpicenterHQ/epicenter
+            ref: 72e9f272adc7e21a9cdeb0dcfa00e1009ba156ed
           - id: pollinations
             repository: pollinations/pollinations
+            ref: cae428f9e75bb9a1d92a7b38d85da9df5e18a527
           - id: fern
             repository: fern-api/fern
+            ref: b5df1878ed86330b9ccb1f764bdfc136c29c5d94
           - id: vscode-material-icon-theme
             repository: material-extensions/vscode-material-icon-theme
+            ref: dbdaf3dec361471986530da138053538dfce9d6a
           - id: scanpy
             repository: scverse/scanpy
+            ref: a656a33b080a5c1f64b01e841daad76f35f5ec5f
           - id: indico
             repository: indico/indico
+            ref: 9fadd1dd6e1494a01081c459ff476d0b48001641
           - id: parabol
             repository: ParabolInc/parabol
+            ref: 21310c943c4c7161bce2961488c96878632da5f2
           - id: carbon
             repository: crbnos/carbon
+            ref: 7f5f1d2145b1ab7f0788f253ea8f6f97d0be3b17
           - id: c15t
             repository: c15t/c15t
+            ref: ce5e35261aa922d7ff3d2d0c73402db16ca01eb9
           - id: opentogethertube
             repository: dyc3/opentogethertube
+            ref: 4e3f7a4ec68a0e0613de3622c340f898c9806d4b
           - id: prisma-next
             repository: prisma/prisma-next
+            ref: 55458c441d2cf452028c22eed21370447720840a
           - id: liam
             repository: liam-hq/liam
+            ref: c89f31d455cd8a5518e3920d8ada6605544cce31
           - id: byline-cms
             repository: Byline-CMS/bylinecms.dev
+            ref: c27ada93adff84c0155553d8fee1de5fdff237a4
 
     name: Test ${{ matrix.id }}
     needs: build-biome
