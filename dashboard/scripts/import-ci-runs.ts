@@ -19,6 +19,8 @@ const CANDIDATE_REPORT_PREFIX = "candidate-report-";
 const REPORT_RETENTION_DAYS = 10;
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
+let githubToken: string | undefined;
+
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const dashboardDirectory = resolve(scriptDirectory, "..");
 const repositoryDirectory = resolve(dashboardDirectory, "..");
@@ -303,8 +305,7 @@ function githubHeaders(): HeadersInit {
 		"User-Agent": "biome-ecosystem-ci-report-importer",
 		"X-GitHub-Api-Version": "2022-11-28",
 	};
-	const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-	if (token) headers.Authorization = `Bearer ${token}`;
+	if (githubToken) headers.Authorization = `Bearer ${githubToken}`;
 	return headers;
 }
 
@@ -395,6 +396,27 @@ async function runCommand(
 	return stdout.trim();
 }
 
+interface GitHubTokenEnvironment {
+	GITHUB_TOKEN?: string;
+	GH_TOKEN?: string;
+}
+
+export async function resolveGitHubToken(
+	environment: GitHubTokenEnvironment = process.env,
+	readGitHubCliToken: () => Promise<string> = () =>
+		runCommand(["gh", "auth", "token", "--hostname", "github.com"]),
+): Promise<string | undefined> {
+	const environmentToken =
+		environment.GITHUB_TOKEN?.trim() || environment.GH_TOKEN?.trim();
+	if (environmentToken) return environmentToken;
+
+	try {
+		return (await readGitHubCliToken()).trim() || undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 async function findFile(
 	directory: string,
 	filename: string,
@@ -417,8 +439,7 @@ async function downloadArtifact(
 	artifact: GitHubArtifact,
 	destination: string,
 ): Promise<void> {
-	const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-	const candidates = token
+	const candidates = githubToken
 		? [
 				{ url: artifact.archive_download_url, headers: githubHeaders() },
 				{
@@ -516,7 +537,7 @@ class CommitResolver {
 			if (!(error instanceof GitHubRequestError)) throw error;
 			if (!this.warnedAboutApi) {
 				console.warn(
-					"GitHub commit lookup failed. Falling back to metadata-only git fetches. Set GITHUB_TOKEN to raise the API limit.",
+					"GitHub commit lookup failed. Falling back to metadata-only git fetches. Authenticate with gh or set GITHUB_TOKEN to raise the API limit.",
 				);
 				this.warnedAboutApi = true;
 			}
@@ -819,7 +840,7 @@ Options:
   --seed                   Reseed local D1/R2 after import. This is the default
   -h, --help               Show this help
 
-Set GITHUB_TOKEN or GH_TOKEN to avoid the public API rate limit.`);
+Authentication: GITHUB_TOKEN, GH_TOKEN, or the active gh login.`);
 }
 
 async function main(): Promise<void> {
@@ -828,6 +849,7 @@ async function main(): Promise<void> {
 		printHelp();
 		return;
 	}
+	githubToken = await resolveGitHubToken();
 
 	const [manifest, workflow] = await Promise.all([
 		JSON.parse(await readFile(manifestPath, "utf8")) as Manifest,
