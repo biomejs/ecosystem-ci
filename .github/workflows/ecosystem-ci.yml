@@ -124,7 +124,7 @@ jobs:
             ref: 121e307f580fc8cbbadb25334dcbf269c91756d2
           - id: anytype-ts
             repository: anyproto/anytype-ts
-            ref: 8b1ef4e4df49ee203bcb5f13c8042bc3c9259d82
+            ref: 5341896df6ec459d609627a8bd1be063e67dce8c
           - id: wagmi
             repository: wevm/wagmi
             ref: 6add6193b501f0d1773e5999b0858b5cae9e856e
