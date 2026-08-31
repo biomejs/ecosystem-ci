@@ -76,7 +76,7 @@ jobs:
             ref: f24fc324a7a4932284e4cadb96944d29980cbcf4
           - id: novu
             repository: novuhq/novu
-            ref: 50597bd3874dc28616cd5a21eadf7d07a33ce5ae
+            ref: 80ebaa666ed74333e85d6c62199d209a8fe77dc7
           - id: discordjs
             repository: discordjs/discord.js
             ref: 10f059e3ca0d3b1c9024da0e1baa81a795288230
