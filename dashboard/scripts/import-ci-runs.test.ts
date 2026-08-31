@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolveGitHubToken } from "./import-ci-runs";
+import { loadManifest, resolveGitHubToken } from "./import-ci-runs";
 
 describe("resolveGitHubToken", () => {
 	test("prefers GITHUB_TOKEN over every other source", async () => {
@@ -32,5 +32,23 @@ describe("resolveGitHubToken", () => {
 		});
 
 		expect(token).toBeUndefined();
+	});
+});
+
+describe("loadManifest", () => {
+	test("starts empty when the generated manifest is absent", async () => {
+		const manifest = await loadManifest("workflow-id", async () => {
+			throw Object.assign(new Error("missing"), { code: "ENOENT" });
+		});
+
+		expect(manifest).toEqual({ workflow: "workflow-id", runs: [] });
+	});
+
+	test("does not hide other read failures", async () => {
+		expect(
+			loadManifest("workflow-id", async () => {
+				throw Object.assign(new Error("denied"), { code: "EACCES" });
+			}),
+		).rejects.toThrow("denied");
 	});
 });

@@ -60,7 +60,7 @@ export interface ManifestRun {
 	results: ManifestResult[];
 }
 
-interface Manifest {
+export interface Manifest {
 	workflow: string;
 	runs: ManifestRun[];
 }
@@ -805,6 +805,7 @@ async function installPreparedReports(
 }
 
 async function removeStaleStagingDirectories(): Promise<void> {
+	await mkdir(reportsDirectory, { recursive: true });
 	for (const entry of await readdir(reportsDirectory, {
 		withFileTypes: true,
 	})) {
@@ -818,12 +819,32 @@ async function removeStaleStagingDirectories(): Promise<void> {
 }
 
 async function writeManifest(manifest: Manifest): Promise<void> {
+	await mkdir(dirname(manifestPath), { recursive: true });
 	const temporaryManifest = `${manifestPath}.tmp-${process.pid}`;
 	await writeFile(
 		temporaryManifest,
 		`${JSON.stringify(manifest, null, "\t")}\n`,
 	);
 	await rename(temporaryManifest, manifestPath);
+}
+
+export async function loadManifest(
+	fallbackWorkflow: string,
+	readText: () => Promise<string> = () => readFile(manifestPath, "utf8"),
+): Promise<Manifest> {
+	try {
+		return JSON.parse(await readText()) as Manifest;
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+		return { workflow: fallbackWorkflow, runs: [] };
+	}
+}
+
+function manifestWorkflow(options: ImportOptions): string {
+	const workflowPath = localWorkflowPath(options.workflow);
+	return workflowPath
+		? `${options.repository}/${workflowPath}`
+		: `${options.repository}/actions/workflows/${options.workflow}`;
 }
 
 function printHelp(): void {
@@ -852,7 +873,7 @@ async function main(): Promise<void> {
 	githubToken = await resolveGitHubToken();
 
 	const [manifest, workflow] = await Promise.all([
-		JSON.parse(await readFile(manifestPath, "utf8")) as Manifest,
+		loadManifest(manifestWorkflow(options)),
 		loadWorkflowDefinition(options),
 	]);
 	const targets = parseWorkflowTargets(workflow);

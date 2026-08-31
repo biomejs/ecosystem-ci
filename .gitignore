@@ -4,6 +4,7 @@ node_modules/
 build/
 .wrangler/
 /dashboard/data/reports/
+/dashboard/data/manifest.json
 .env
 .env.*
 !.env.example
