@@ -188,6 +188,9 @@ jobs:
           - id: byline-cms
             repository: Byline-CMS/bylinecms.dev
             ref: c27ada93adff84c0155553d8fee1de5fdff237a4
+          - id: poketernity
+            repository: Despair-Games/poketernity
+            ref: 7fb6d12a13d528a1b70536a1a3150dd6b7049daa
 
     name: Test ${{ matrix.id }}
     needs: build-biome
