@@ -10,7 +10,6 @@ let {
 	runs,
 	values,
 	hue,
-	format,
 	zeroBased = false,
 	height = 60,
 	axis = "none",
@@ -23,7 +22,6 @@ let {
 	runs: Run[];
 	values: (number | null)[];
 	hue: string;
-	format: (v: number) => string;
 	zeroBased?: boolean;
 	height?: number;
 	/** "dates" adds run dates under the chart (use on the last row of a column) */
@@ -123,7 +121,13 @@ function onkeydown(e: KeyboardEvent) {
 		{onkeydown}
 	>
 		{#each ticks as t}
-			<line x1={m.left} x2={m.left + pw} y1={y(t)} y2={y(t)} stroke="var(--hair)" />
+			<line
+				x1={m.left}
+				x2={m.left + pw}
+				y1={y(t)}
+				y2={y(t)}
+				stroke="var(--hair)"
+			/>
 		{/each}
 		{#if baseline !== null}
 			<line
@@ -168,12 +172,23 @@ function onkeydown(e: KeyboardEvent) {
 			stroke-linecap="round"
 		/>
 		{#if last !== null}
-			<circle cx={x(values.length - 1)} cy={y(last)} r="5.5" fill="var(--surface)" />
+			<circle
+				cx={x(values.length - 1)}
+				cy={y(last)}
+				r="5.5"
+				fill="var(--surface)"
+			/>
 			<circle cx={x(values.length - 1)} cy={y(last)} r="3.5" fill={hue} />
 		{/if}
 
 		{#if hi !== null && hi < runs.length}
-			<line x1={x(hi)} x2={x(hi)} y1={m.top} y2={m.top + ph} stroke="var(--base)" />
+			<line
+				x1={x(hi)}
+				x2={x(hi)}
+				y1={m.top}
+				y2={m.top + ph}
+				stroke="var(--base)"
+			/>
 			{#if hoverValue !== null}
 				<circle cx={x(hi)} cy={y(hoverValue)} r="5" fill="var(--surface)" />
 				<circle cx={x(hi)} cy={y(hoverValue)} r="3" fill={hue} />

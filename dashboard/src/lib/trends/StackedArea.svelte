@@ -124,7 +124,13 @@ function onkeydown(e: KeyboardEvent) {
 		{onkeydown}
 	>
 		{#each ticks as t}
-			<line x1={m.left} x2={m.left + pw} y1={y(t)} y2={y(t)} stroke="var(--hair)" />
+			<line
+				x1={m.left}
+				x2={m.left + pw}
+				y1={y(t)}
+				y2={y(t)}
+				stroke="var(--hair)"
+			/>
 		{/each}
 		{#each layers as l, k}
 			<path
@@ -149,7 +155,13 @@ function onkeydown(e: KeyboardEvent) {
 			{/each}
 		{/if}
 		{#if hi !== null && hi < runs.length}
-			<line x1={x(hi)} x2={x(hi)} y1={m.top} y2={m.top + ph} stroke="var(--ink-2)" />
+			<line
+				x1={x(hi)}
+				x2={x(hi)}
+				y1={m.top}
+				y2={m.top + ph}
+				stroke="var(--ink-2)"
+			/>
 		{/if}
 	</svg>
 </div>

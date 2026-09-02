@@ -7,7 +7,9 @@
 		"dashboard"
 	],
 	"scripts": {
+		"lint": "biome ci .",
 		"test": "node --experimental-strip-types --test test/*.test.ts",
+		"test:dashboard": "bun test dashboard/scripts/import-ci-runs.test.ts",
 		"dev": "bun run --cwd dashboard dev",
 		"build": "bun run --cwd dashboard build",
 		"check": "bun run --cwd dashboard check",

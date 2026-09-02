@@ -6,10 +6,7 @@ let { children } = $props();
 
 <svelte:head>
 	<title>Biome Ecosystem CI</title>
-	<meta
-		name="description"
-		content="Trends across Biome ecosystem CI runs."
-	>
+	<meta name="description" content="Trends across Biome ecosystem CI runs.">
 </svelte:head>
 
 {@render children()}

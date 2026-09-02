@@ -1,6 +1,6 @@
 // Change detection: robust (median / MAD) binary segmentation per series.
 import type { Dataset, Metric, Repo, ValueKey } from "./data";
-import { METRICS, SEVERITIES, isTime } from "./data";
+import { isTime, METRICS, SEVERITIES } from "./data";
 
 export type FindingKind = "step" | "spike" | "recovered";
 
@@ -65,11 +65,23 @@ function segment(
 	}
 	if (best.s < 0 || best.z < threshold) return [];
 	return [
-		...segment(pts.slice(0, best.s), key, threshold, minLeft, minRight, depth + 1),
-		best.s,
-		...segment(pts.slice(best.s), key, threshold, minLeft, minRight, depth + 1).map(
-			(b) => b + best.s,
+		...segment(
+			pts.slice(0, best.s),
+			key,
+			threshold,
+			minLeft,
+			minRight,
+			depth + 1,
 		),
+		best.s,
+		...segment(
+			pts.slice(best.s),
+			key,
+			threshold,
+			minLeft,
+			minRight,
+			depth + 1,
+		).map((b) => b + best.s),
 	];
 }
 
@@ -154,7 +166,11 @@ function detectSeries(
 	return out;
 }
 
-const KIND_RANK: Record<FindingKind, number> = { step: 0, spike: 1, recovered: 2 };
+const KIND_RANK: Record<FindingKind, number> = {
+	step: 0,
+	spike: 1,
+	recovered: 2,
+};
 /** what a maintainer wants to see first — σ is not comparable across metrics, so rank by metric then recency */
 const METRIC_RANK: Record<string, number> = {
 	panics: 0,

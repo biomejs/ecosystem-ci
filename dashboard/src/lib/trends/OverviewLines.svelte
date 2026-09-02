@@ -38,7 +38,9 @@ const rawSeries = $derived(
 );
 
 function relativeToFirst(values: (number | null)[]): (number | null)[] {
-	const baseline = values.find((value): value is number => value !== null && value !== 0);
+	const baseline = values.find(
+		(value): value is number => value !== null && value !== 0,
+	);
 	if (baseline === undefined) return values.map(() => null);
 	return values.map((value) =>
 		value === null ? null : ((value - baseline) / baseline) * 100,
@@ -54,8 +56,7 @@ const series = $derived(
 const allValues = $derived(
 	series.flatMap((item) =>
 		item.values.filter(
-			(value): value is number =>
-				value !== null && (!logarithmic || value > 0),
+			(value): value is number => value !== null && (!logarithmic || value > 0),
 		),
 	),
 );
@@ -71,15 +72,17 @@ const domain = $derived.by((): [number, number] => {
 	if (logarithmic) {
 		const lowPower = Math.floor(Math.log10(low));
 		const highPower = Math.ceil(Math.log10(high));
-		const logarithmicDomain: [number, number] = lowPower === highPower
-			? [10 ** (lowPower - 1), 10 ** (highPower + 1)]
-			: [10 ** lowPower, 10 ** highPower];
+		const logarithmicDomain: [number, number] =
+			lowPower === highPower
+				? [10 ** (lowPower - 1), 10 ** (highPower + 1)]
+				: [10 ** lowPower, 10 ** highPower];
 		if (logarithmicDomain[1] - logarithmicDomain[0] < minimumAbsoluteSpan) {
 			logarithmicDomain[1] = logarithmicDomain[0] + minimumAbsoluteSpan;
 		}
 		return logarithmicDomain;
 	}
-	if (!relative) return [0, Math.max(minimumAbsoluteSpan, Math.max(1, high) * 1.08)];
+	if (!relative)
+		return [0, Math.max(minimumAbsoluteSpan, Math.max(1, high) * 1.08)];
 	if (low === high) {
 		const padding = Math.abs(low) * 0.1 || 1;
 		return [low - padding, high + padding];
@@ -137,7 +140,8 @@ const xTicks = $derived.by(() => {
 	if (runs.length <= maxTicks) return runs.map((_, index) => index);
 	const step = Math.ceil((runs.length - 1) / maxTicks);
 	const indices: number[] = [];
-	for (let index = runs.length - 1; index >= 0; index -= step) indices.unshift(index);
+	for (let index = runs.length - 1; index >= 0; index -= step)
+		indices.unshift(index);
 	return indices;
 });
 
@@ -191,17 +195,22 @@ function onkeydown(event: KeyboardEvent) {
 		<h2 class="font-semibold">{title}</h2>
 		<div class="flex items-center gap-3 text-compact">
 			<label class="inline-flex items-center gap-1.5">
-				<input type="checkbox" checked={logarithmic} onchange={toggleLogarithmic} />
+				<input
+					type="checkbox"
+					checked={logarithmic}
+					onchange={toggleLogarithmic}
+				>
 				Log scale
 			</label>
 			<label class="inline-flex items-center gap-1.5">
-				<input type="checkbox" checked={relative} onchange={toggleRelative} />
+				<input type="checkbox" checked={relative} onchange={toggleRelative}>
 				Relative to first
 			</label>
 		</div>
 	</div>
 	<p class="muted mb-1 text-compact">
-		{formatDay(runs[focusIndex].startedAt)} · {focusRange}
+		{formatDay(runs[focusIndex].startedAt)}
+		· {focusRange}
 	</p>
 	<div class="min-w-0 overflow-hidden" bind:clientWidth={width}>
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->

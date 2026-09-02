@@ -303,7 +303,6 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 								{runs}
 								values={vals}
 								hue={m.hue}
-								format={m.format}
 								zeroBased={m.zeroBased}
 								baseline={f ? f.before : null}
 								softRelativeSpan={isTime(m.key) ? 1 : null}

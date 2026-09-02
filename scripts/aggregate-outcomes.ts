@@ -420,7 +420,7 @@ export function formatDuration(duration: number | undefined): string {
  * Get total diagnostic count from report
  */
 export function getTotalDiagnostics(report: BiomeReport | null): number {
-	if (!report || !report.summary) return 0;
+	if (!report?.summary) return 0;
 	return (
 		(report.summary.errors || 0) +
 		(report.summary.warnings || 0) +
@@ -659,7 +659,9 @@ export function formatDiagnosticComparison({
 		`parse: ${formatCount(current.parse, previous?.parse)}`,
 	].join(", ");
 	const panic = current.panic ? "**yes**" : "no";
-	const previousPanic = previous ? ` (was ${previous.panic ? "yes" : "no"})` : "";
+	const previousPanic = previous
+		? ` (was ${previous.panic ? "yes" : "no"})`
+		: "";
 
 	return `${metrics}, panic: ${panic}${previousPanic}`;
 }
