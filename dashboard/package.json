@@ -13,7 +13,8 @@
 		"db:migrate:remote": "wrangler d1 migrations apply DB --remote",
 		"db:seed:local": "bun run scripts/seed-local.ts",
 		"db:setup:local": "bun run db:migrate:local && bun run db:seed:local",
-		"reports:import": "bun run scripts/import-ci-runs.ts"
+		"reports:import": "bun run scripts/import-ci-runs.ts",
+		"reports:diagnostics": "bun run scripts/read-diagnostics.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260819.1",

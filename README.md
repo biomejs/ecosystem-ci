@@ -21,3 +21,15 @@ bun run dev
 ```
 
 Use `bun run check` and `bun run build` to validate the dashboard. The existing ecosystem CI tests remain available through `bun run test`.
+
+### Reading raw diagnostics
+
+Use `reports:diagnostics` to read diagnostics from the reports in `dashboard/data/reports`. Pass a report id or repository slug. The command reads the newest run unless you pass `--run`.
+
+```sh
+bun run reports:diagnostics astro
+bun run reports:diagnostics astro --severity error --category lint
+bun run reports:diagnostics withastro/astro --run 33613560701 --path packages
+```
+
+The command prints at most 100 matching diagnostics by default. Pass `--all` to print all of them, `--json` for JSON, or `--help` for every filter.

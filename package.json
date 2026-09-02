@@ -12,6 +12,7 @@
 		"build": "bun run --cwd dashboard build",
 		"check": "bun run --cwd dashboard check",
 		"reports:import": "bun run --cwd dashboard reports:import",
+		"reports:diagnostics": "bun run --cwd dashboard reports:diagnostics",
 		"deploy": "bun run --cwd dashboard deploy"
 	},
 	"devDependencies": {
