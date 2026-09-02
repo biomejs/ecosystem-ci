@@ -208,9 +208,8 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 		>
 			{#if hovered}
 				<span class="eyebrow">Run</span>
-				<a class="mono" href={hovered.commitUrl}>{shortSha(hovered.sha)}</a>
+				<span class="mono">{shortSha(hovered.sha)}</span>
 				<span class="ink-2">{formatDateTime(hovered.startedAt)} UTC</span>
-				<a href={hovered.url}>workflow run</a>
 			{:else}
 				<span>
 					<span class="font-semibold"
