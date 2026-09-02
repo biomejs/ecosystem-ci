@@ -1,4 +1,5 @@
 <script lang="ts">
+import StickyHorizontalScroll from "$lib/StickyHorizontalScroll.svelte";
 import {
 	buildDataset,
 	formatDeltaShort,
@@ -230,7 +231,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 			{/if}
 		</div>
 
-		<div class="panel overflow-x-auto">
+		<StickyHorizontalScroll class="panel" label="Repository metrics">
 			<div
 				class="grid min-w-dashboard-table"
 				style="grid-template-columns: 12rem repeat(4, minmax(0, 1fr)) minmax(0, 1.2fr)"
@@ -387,7 +388,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 					</div>
 				{/each}
 			</div>
-		</div>
+		</StickyHorizontalScroll>
 		<p class="muted mt-2 text-xs">
 			Each cell is scaled to its own range. Coloured ▲/▼ = a detected change (≥{threshold}σ
 			from the baseline, held ≥2 runs, or the latest run alone); the grey line
