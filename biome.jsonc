@@ -6,7 +6,7 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!test/fixtures"]
+		"includes": ["**", "!!test/fixtures"]
 	},
 	"html": {
 		"experimentalFullSupportEnabled": true,
@@ -20,7 +20,11 @@
 		}
 	},
 	"linter": {
+		"domains": {
+			"svelte": "recommended"
+		},
 		"rules": {
+			"preset": "recommended",
 			"nursery": {
 				"noTailwindArbitraryValue": "error",
 				"useTailwindShorthandClasses": "error"
