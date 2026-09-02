@@ -23,7 +23,7 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 			<label>
 				<span>Baseline run</span>
 				<select name="base">
-					{#each data.runs as run}
+					{#each data.runs as run (run.githubRunId)}
 						<option
 							value={run.githubRunId}
 							selected={run.githubRunId === data.base.githubRunId}
@@ -45,7 +45,7 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 			<label>
 				<span>Compared run</span>
 				<select name="head">
-					{#each data.runs as run}
+					{#each data.runs as run (run.githubRunId)}
 						<option
 							value={run.githubRunId}
 							selected={run.githubRunId === data.head.githubRunId}

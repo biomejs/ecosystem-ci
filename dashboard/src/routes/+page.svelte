@@ -85,9 +85,9 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 <svelte:head><title>Ecosystem CI</title></svelte:head>
 
 {#snippet deltaCell(m: Metric, vals: (number | null)[], f: Finding | undefined)}
-	{@const last = lastDefined(vals)}
-	{@const prev = last ? lastDefined(vals, last.index - 1) : null}
-	{@const hv = hover.index === null ? undefined : vals[hover.index]}
+	{const last = $derived(lastDefined(vals))}
+	{const prev = $derived(last ? lastDefined(vals, last.index - 1) : null)}
+	{const hv = $derived(hover.index === null ? undefined : vals[hover.index])}
 	<div class="num grid pr-1 text-right">
 		<div
 			class="col-start-1 row-start-1"
@@ -155,7 +155,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 							name="branch"
 							onchange={(event) => event.currentTarget.form?.requestSubmit()}
 						>
-							{#each data.branches as branch}
+							{#each data.branches as branch (branch)}
 								<option value={branch} selected={branch === data.branch}>
 									{branch}
 								</option>
@@ -237,7 +237,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				style="grid-template-columns: 12rem repeat(4, minmax(0, 1fr)) minmax(0, 1.2fr)"
 			>
 				<div class="border-b px-3 py-2" style="border-color: var(--hair)"></div>
-				{#each METRICS as m}
+				{#each METRICS as m (m.key)}
 					<div
 						class="border-b border-l px-3 py-2"
 						style="border-color: var(--hair)"
@@ -261,7 +261,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 					>
 						<span class="font-semibold">By severity</span>
 						<span class="ml-auto flex gap-1.5 text-compact ink-2">
-							{#each [...SEVERITIES].reverse() as s}
+							{#each [...SEVERITIES].reverse() as s (s.key)}
 								<span class="inline-flex items-center gap-1"
 									><span
 										class="inline-block size-2.5"
@@ -274,9 +274,9 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				</div>
 
 				{#each rows as row, ri (row.repo.slug)}
-					{@const repo = row.repo}
-					{@const lastRow = ri === rows.length - 1}
-					{@const divider = ri === firstQuiet && ri > 0}
+					{const repo = $derived(row.repo)}
+					{const lastRow = $derived(ri === rows.length - 1)}
+					{const divider = $derived(ri === firstQuiet && ri > 0)}
 					<div
 						class="flex flex-col justify-center px-3 py-2"
 						style="border-bottom: 1px solid var(--hair)"
@@ -291,9 +291,9 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 							<span class="muted text-compact">no report in latest run</span>
 						{/if}
 					</div>
-					{#each METRICS as m}
-						{@const vals = seriesValues(repo, m.key)}
-						{@const f = findingFor(repo, m.key)}
+					{#each METRICS as m (m.key)}
+						{const vals = $derived(seriesValues(repo, m.key))}
+						{const f = $derived(findingFor(repo, m.key))}
 						<div
 							class="metric-cell grid items-center gap-2 border-l px-2 py-1"
 							style="border-color: var(--hair); border-bottom: 1px solid var(--hair)"
@@ -315,14 +315,22 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 							{@render deltaCell(m, vals, f)}
 						</div>
 					{/each}
-					{@const totals = severityTotals(repo)}
-					{@const lastTotal = lastDefined(totals)}
-					{@const sevFinding = SEVERITIES.map((s) => findingFor(repo, s.key))
-						.filter((x): x is Finding => !!x)
-						.sort((a, b) => Number(b.worse) - Number(a.worse) || b.at - a.at)[0]}
-					{@const latestAt = lastTotal?.index ?? null}
-					{@const latestCell = latestAt === null ? null : repo.cells[latestAt]}
-					{@const hoverCell = hover.index === null ? null : repo.cells[hover.index]}
+					{const totals = $derived(severityTotals(repo))}
+					{const lastTotal = $derived(lastDefined(totals))}
+					{const sevFinding = $derived(
+						SEVERITIES.map((s) => findingFor(repo, s.key))
+							.filter((x): x is Finding => !!x)
+							.sort(
+								(a, b) => Number(b.worse) - Number(a.worse) || b.at - a.at,
+							)[0],
+					)}
+					{const latestAt = $derived(lastTotal?.index ?? null)}
+					{const latestCell = $derived(
+						latestAt === null ? null : repo.cells[latestAt],
+					)}
+					{const hoverCell = $derived(
+						hover.index === null ? null : repo.cells[hover.index],
+					)}
 					<div
 						class="severity-cell grid items-center gap-2 border-l px-2 py-1"
 						style="border-color: var(--hair); border-bottom: 1px solid var(--hair)"

@@ -123,7 +123,7 @@ function onkeydown(e: KeyboardEvent) {
 		onpointerleave={() => (hover.index = null)}
 		{onkeydown}
 	>
-		{#each ticks as t}
+		{#each ticks as t (t)}
 			<line
 				x1={m.left}
 				x2={m.left + pw}
@@ -132,7 +132,7 @@ function onkeydown(e: KeyboardEvent) {
 				stroke="var(--hair)"
 			/>
 		{/each}
-		{#each layers as l, k}
+		{#each layers as l, k (l.key)}
 			<path
 				d={areaPath(k)}
 				fill={l.hue}
@@ -142,7 +142,7 @@ function onkeydown(e: KeyboardEvent) {
 			/>
 		{/each}
 		{#if axis === "dates"}
-			{#each xTicks as i}
+			{#each xTicks as i (i)}
 				<text
 					x={x(i)}
 					y={height - 5}

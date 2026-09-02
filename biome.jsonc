@@ -26,7 +26,9 @@
 		"rules": {
 			"preset": "recommended",
 			"nursery": {
+				"noSvelteLegacyConst": "error",
 				"noTailwindArbitraryValue": "error",
+				"useSvelteRequireEachKey": "error",
 				"useTailwindShorthandClasses": "error"
 			}
 		}

@@ -66,15 +66,16 @@ const color = (kind: ReturnType<typeof reviewKind>): string =>
 			<span>Panics</span>
 		</div>
 		{#each rows as row (row.repositorySlug)}
-			{@const kind = reviewKind(row)}
-			{@const check = percentDelta(row.base.checkMs, row.head.checkMs)}
-			{@const scanner = percentDelta(row.base.scannerMs, row.head.scannerMs)}
-			{@const diagnostics = diagnosticDelta(row)}
-			{@const diagnosticsRate = relativeDelta(
-				diagnosticTotal(row.base),
-				diagnosticTotal(row.head),
+			{const kind = $derived(reviewKind(row))}
+			{const check = $derived(percentDelta(row.base.checkMs, row.head.checkMs))}
+			{const scanner = $derived(
+				percentDelta(row.base.scannerMs, row.head.scannerMs),
 			)}
-			{@const panics = row.head.panics - row.base.panics}
+			{const diagnostics = $derived(diagnosticDelta(row))}
+			{const diagnosticsRate = $derived(
+				relativeDelta(diagnosticTotal(row.base), diagnosticTotal(row.head)),
+			)}
+			{const panics = $derived(row.head.panics - row.base.panics)}
 			<article class="scan-row">
 				<div class="repo-cell">
 					<span class="status-dot" style:background={color(kind)}></span>

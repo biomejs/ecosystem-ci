@@ -225,7 +225,7 @@ function onkeydown(event: KeyboardEvent) {
 			onpointerleave={() => (hover.index = null)}
 			{onkeydown}
 		>
-			{#each ticks as tick}
+			{#each ticks as tick (tick)}
 				<line
 					x1={margin.left}
 					x2={margin.left + plotWidth}
@@ -258,7 +258,7 @@ function onkeydown(event: KeyboardEvent) {
 				</path>
 			{/each}
 
-			{#each xTicks as index}
+			{#each xTicks as index (index)}
 				<text
 					x={x(index)}
 					y={height - 5}
