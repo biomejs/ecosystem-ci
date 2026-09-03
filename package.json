@@ -1,6 +1,21 @@
 {
+	"name": "biome-ecosystem-ci",
+	"private": true,
+	"packageManager": "pnpm@11.25.0",
 	"type": "module",
 	"scripts": {
-		"test": "node --experimental-strip-types --test test/aggregate-outcomes.test.ts"
+		"lint": "biome check",
+		"test": "pnpm --dir dashboard exec svelte-kit sync && vitest run",
+		"dev": "pnpm --dir dashboard run dev",
+		"build": "pnpm --dir dashboard run build",
+		"check": "pnpm --dir dashboard run check",
+		"reports:import": "pnpm --dir dashboard run reports:import",
+		"reports:diagnostics": "pnpm --dir dashboard run reports:diagnostics",
+		"deploy": "pnpm --dir dashboard run deploy"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.12",
+		"tsx": "^4.20.5",
+		"vitest": "^4.1.11"
 	}
 }

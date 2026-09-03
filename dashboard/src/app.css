@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+	--text-compact: 0.6875rem;
+	--text-compact--line-height: 1rem;
+	--text-micro: 0.625rem;
+	--text-micro--line-height: 0.875rem;
+	--container-dashboard: 93.75rem;
+	--spacing-dashboard-table: 82.5rem;
+}
+
+/* Dark only. Metric hues validated for contrast and colour-vision deficiency on #121211. */
+@layer base {
+	:root {
+		--page: #121211;
+		--surface: #1a1a19;
+		--ink: #f2f1ec;
+		--ink-2: #c3c2b7;
+		--muted: #898781;
+		--hair: #2c2c2a;
+		--base: #3d3d3a;
+		--blue: #3987e5;
+		--aqua: #199e70;
+		--orange: #d95926;
+		--violet: #a99ff0;
+		--sev-error: #b5b4ad;
+		--sev-warning: #6e6d67;
+		--sev-info: #3a3a37;
+		--worse: #e66767;
+		--better: #2fb344;
+		color-scheme: dark;
+	}
+
+	html {
+		min-height: 100vh;
+		background: var(--page);
+		color: var(--ink);
+		font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+		font-size: 13px;
+		line-height: 1.35;
+	}
+
+	body {
+		margin: 0;
+	}
+
+	select {
+		color: inherit;
+		background: var(--surface);
+	}
+
+	a {
+		color: inherit;
+		text-decoration: underline;
+		text-decoration-color: var(--base);
+		text-underline-offset: 3px;
+	}
+
+	a:hover {
+		text-decoration-color: var(--ink);
+	}
+
+	a:focus-visible,
+	select:focus-visible,
+	[tabindex]:focus-visible {
+		outline: 2px solid var(--ink);
+		outline-offset: 2px;
+	}
+}
+
+@layer components {
+	.mono {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	}
+
+	.num {
+		font-variant-numeric: tabular-nums;
+	}
+
+	.panel {
+		background: var(--surface);
+		border: 1px solid var(--hair);
+	}
+
+	.metric-cell {
+		grid-template-columns: minmax(0, 1fr) 5.5rem;
+	}
+
+	.severity-cell {
+		grid-template-columns: minmax(0, 1fr) 6rem;
+	}
+
+	.eyebrow {
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	.ink-2 {
+		color: var(--ink-2);
+	}
+
+	.muted {
+		color: var(--muted);
+	}
+
+	/* legend swatch for a line metric */
+	.key {
+		display: inline-block;
+		width: 14px;
+		height: 2px;
+		vertical-align: middle;
+		border-radius: 1px;
+	}
+}

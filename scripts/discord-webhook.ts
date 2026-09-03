@@ -12,18 +12,11 @@ const defaultSleep = (milliseconds: number) =>
 export async function sendDiscordMessage(
 	webhookUrl: string,
 	content: string,
-	{
-		fetchImpl = fetch,
-		sleep = defaultSleep,
-	}: SendDiscordMessageOptions = {},
+	{ fetchImpl = fetch, sleep = defaultSleep }: SendDiscordMessageOptions = {},
 ): Promise<void> {
 	let lastError: unknown;
 
-	for (
-		let attempt = 1;
-		attempt <= DISCORD_WEBHOOK_MAX_ATTEMPTS;
-		attempt++
-	) {
+	for (let attempt = 1; attempt <= DISCORD_WEBHOOK_MAX_ATTEMPTS; attempt++) {
 		try {
 			const response = await fetchImpl(webhookUrl, {
 				method: "POST",

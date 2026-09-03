@@ -1,2 +1,10 @@
 target/
-.claude/
+node_modules/
+.svelte-kit/
+build/
+.wrangler/
+/dashboard/data/reports/
+/dashboard/data/manifest.json
+.env
+.env.*
+!.env.example

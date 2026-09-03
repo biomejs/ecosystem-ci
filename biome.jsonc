@@ -1,0 +1,52 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"includes": ["**", "!!test/fixtures"]
+	},
+	"html": {
+		"experimentalFullSupportEnabled": true,
+		"formatter": {
+			"enabled": true
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"linter": {
+		"domains": {
+			"svelte": "recommended"
+		},
+		"rules": {
+			"preset": "recommended",
+			"nursery": {
+				"noSvelteLegacyConst": "error",
+				"noTailwindArbitraryValue": "error",
+				"useSvelteRequireEachKey": "error",
+				"useTailwindShorthandClasses": "error"
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": [
+				"dashboard/src/lib/trends/OverviewLines.svelte",
+				"dashboard/src/lib/trends/StackedArea.svelte",
+				"dashboard/src/lib/trends/TrendLine.svelte"
+			],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"noNoninteractiveTabindex": "off"
+					}
+				}
+			}
+		}
+	]
+}

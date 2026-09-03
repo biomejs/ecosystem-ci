@@ -3,28 +3,28 @@
 /**
  * Tests for aggregate-outcomes script
  *
- * Run with: node --experimental-strip-types --test test/aggregate-outcomes.test.ts
+ * Run with: pnpm exec vitest run test/aggregate-outcomes.test.ts
  */
 
-import { describe, test } from "node:test";
 import assert from "node:assert";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { describe, test } from "vitest";
 import {
-	formatDuration,
-	getTotalDiagnostics,
-	computeTrend,
+	aggregateResults,
+	type BiomeReport,
 	computeBaseTag,
 	computeFullOutcome,
-	aggregateResults,
-	getDiagnosticMetrics,
+	computeTrend,
 	formatDiagnosticComparison,
-	splitDiscordMessage,
-	readMinimalOutcomes,
-	readReport,
-	type BiomeReport,
+	formatDuration,
+	getDiagnosticMetrics,
+	getTotalDiagnostics,
 	type MinimalOutcome,
 	type OutcomeData,
+	readMinimalOutcomes,
+	readReport,
+	splitDiscordMessage,
 } from "../scripts/aggregate-outcomes.ts";
 import {
 	DISCORD_WEBHOOK_INITIAL_RETRY_DELAY_MS,
@@ -469,7 +469,9 @@ describe("aggregateResults", () => {
 
 		const message = aggregateResults(outcomes);
 
-		assert.ok(message.includes("**Summary:** 2 passed, 1 failed, 1 other (total: 4)"));
+		assert.ok(
+			message.includes("**Summary:** 2 passed, 1 failed, 1 other (total: 4)"),
+		);
 	});
 
 	test("includes diagnostic metrics and comparisons", () => {
@@ -510,7 +512,9 @@ describe("aggregateResults", () => {
 
 describe("splitDiscordMessage", () => {
 	test("keeps short messages intact", () => {
-		assert.deepStrictEqual(splitDiscordMessage("short report"), ["short report"]);
+		assert.deepStrictEqual(splitDiscordMessage("short report"), [
+			"short report",
+		]);
 	});
 
 	test("packs whole lines into messages within the limit", () => {
@@ -603,7 +607,11 @@ describe("Integration tests", () => {
 		const fullOutcomes = minimalOutcomes.map((outcome) =>
 			computeFullOutcome(outcome, reportsDir, previousReportsDir),
 		);
-		const message = aggregateResults(fullOutcomes, "main", "https://example.com");
+		const message = aggregateResults(
+			fullOutcomes,
+			"main",
+			"https://example.com",
+		);
 
 		// Verify message contains expected elements
 		assert.ok(message.includes("**Biome Ecosystem CI Results**"));

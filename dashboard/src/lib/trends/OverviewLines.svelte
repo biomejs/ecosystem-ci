@@ -1,0 +1,289 @@
+<script lang="ts">
+import type { Repo, Run, ValueKey } from "./data";
+import { seriesValues } from "./data";
+import { formatDay, formatPct, niceTicks } from "./format";
+import { hover } from "./hover.svelte";
+
+let {
+	runs,
+	repos,
+	metric,
+	title,
+	hue,
+	format,
+	minimumAbsoluteSpan = 0,
+}: {
+	runs: Run[];
+	repos: Repo[];
+	metric: ValueKey;
+	title: string;
+	hue: string;
+	format: (value: number) => string;
+	minimumAbsoluteSpan?: number;
+} = $props();
+
+let width = $state(600);
+let logarithmic = $state(false);
+let relative = $state(false);
+const height = 190;
+const margin = { left: 54, right: 10, top: 8, bottom: 24 };
+const plotWidth = $derived(Math.max(10, width - margin.left - margin.right));
+const plotHeight = height - margin.top - margin.bottom;
+
+const rawSeries = $derived(
+	repos.map((repo) => ({
+		slug: repo.slug,
+		values: seriesValues(repo, metric),
+	})),
+);
+
+function relativeToFirst(values: (number | null)[]): (number | null)[] {
+	const baseline = values.find(
+		(value): value is number => value !== null && value !== 0,
+	);
+	if (baseline === undefined) return values.map(() => null);
+	return values.map((value) =>
+		value === null ? null : ((value - baseline) / baseline) * 100,
+	);
+}
+
+const series = $derived(
+	rawSeries.map((item) => ({
+		slug: item.slug,
+		values: relative ? relativeToFirst(item.values) : item.values,
+	})),
+);
+const allValues = $derived(
+	series.flatMap((item) =>
+		item.values.filter(
+			(value): value is number => value !== null && (!logarithmic || value > 0),
+		),
+	),
+);
+const domain = $derived.by((): [number, number] => {
+	if (allValues.length === 0) {
+		if (relative) return [0, 1];
+		return logarithmic
+			? [1, Math.max(10, 1 + minimumAbsoluteSpan)]
+			: [0, Math.max(1, minimumAbsoluteSpan)];
+	}
+	const low = Math.min(...allValues);
+	const high = Math.max(...allValues);
+	if (logarithmic) {
+		const lowPower = Math.floor(Math.log10(low));
+		const highPower = Math.ceil(Math.log10(high));
+		const logarithmicDomain: [number, number] =
+			lowPower === highPower
+				? [10 ** (lowPower - 1), 10 ** (highPower + 1)]
+				: [10 ** lowPower, 10 ** highPower];
+		if (logarithmicDomain[1] - logarithmicDomain[0] < minimumAbsoluteSpan) {
+			logarithmicDomain[1] = logarithmicDomain[0] + minimumAbsoluteSpan;
+		}
+		return logarithmicDomain;
+	}
+	if (!relative)
+		return [0, Math.max(minimumAbsoluteSpan, Math.max(1, high) * 1.08)];
+	if (low === high) {
+		const padding = Math.abs(low) * 0.1 || 1;
+		return [low - padding, high + padding];
+	}
+	const span = high - low;
+	return [Math.min(0, low - span * 0.08), Math.max(0, high + span * 0.08)];
+});
+
+function logarithmicTicks(low: number, high: number): number[] {
+	const ticks: number[] = [];
+	for (
+		let power = Math.ceil(Math.log10(low));
+		power <= Math.floor(Math.log10(high));
+		power++
+	) {
+		ticks.push(10 ** power);
+	}
+	return ticks;
+}
+
+const ticks = $derived(
+	logarithmic
+		? logarithmicTicks(domain[0], domain[1])
+		: niceTicks(domain[0], domain[1], 4),
+);
+const displayFormat = $derived(relative ? formatPct : format);
+
+const x = (index: number): number =>
+	margin.left +
+	(runs.length <= 1 ? plotWidth / 2 : (index / (runs.length - 1)) * plotWidth);
+const y = (value: number): number => {
+	const position = logarithmic
+		? (Math.log10(value) - Math.log10(domain[0])) /
+			(Math.log10(domain[1]) - Math.log10(domain[0]))
+		: (value - domain[0]) / (domain[1] - domain[0]);
+	return margin.top + plotHeight - position * plotHeight;
+};
+
+function linePath(values: (number | null)[]): string {
+	let path = "";
+	let drawing = false;
+	values.forEach((value, index) => {
+		if (value === null || (logarithmic && value <= 0)) {
+			drawing = false;
+			return;
+		}
+		path += `${drawing ? "L" : "M"}${x(index).toFixed(1)} ${y(value).toFixed(1)} `;
+		drawing = true;
+	});
+	return path;
+}
+
+const xTicks = $derived.by(() => {
+	const maxTicks = Math.max(2, Math.min(7, Math.floor(plotWidth / 80)));
+	if (runs.length <= maxTicks) return runs.map((_, index) => index);
+	const step = Math.ceil((runs.length - 1) / maxTicks);
+	const indices: number[] = [];
+	for (let index = runs.length - 1; index >= 0; index -= step)
+		indices.unshift(index);
+	return indices;
+});
+
+const focusIndex = $derived(hover.index ?? runs.length - 1);
+const focusValues = $derived(
+	series.flatMap((item) => {
+		const value = item.values[focusIndex];
+		return value === null || value === undefined || (logarithmic && value <= 0)
+			? []
+			: [{ slug: item.slug, value }];
+	}),
+);
+const focusRange = $derived.by(() => {
+	if (focusValues.length === 0) return "no reports";
+	const values = focusValues.map((item) => item.value);
+	const noun = focusValues.length === 1 ? "report" : "reports";
+	return `${focusValues.length} ${noun} · ${displayFormat(Math.min(...values))} to ${displayFormat(Math.max(...values))}`;
+});
+
+function toggleLogarithmic(event: Event) {
+	logarithmic = (event.currentTarget as HTMLInputElement).checked;
+	if (logarithmic) relative = false;
+}
+
+function toggleRelative(event: Event) {
+	relative = (event.currentTarget as HTMLInputElement).checked;
+	if (relative) logarithmic = false;
+}
+
+function onpointermove(event: PointerEvent) {
+	const rect = (event.currentTarget as SVGSVGElement).getBoundingClientRect();
+	const index = Math.round(
+		((event.clientX - rect.left - margin.left) / plotWidth) * (runs.length - 1),
+	);
+	hover.index = Math.max(0, Math.min(runs.length - 1, index));
+}
+
+function onkeydown(event: KeyboardEvent) {
+	if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+	event.preventDefault();
+	const current = hover.index ?? runs.length - 1;
+	hover.index = Math.max(
+		0,
+		Math.min(runs.length - 1, current + (event.key === "ArrowLeft" ? -1 : 1)),
+	);
+}
+</script>
+
+<section class="panel min-w-0 p-3">
+	<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+		<h2 class="font-semibold">{title}</h2>
+		<div class="flex items-center gap-3 text-compact">
+			<label class="inline-flex items-center gap-1.5">
+				<input
+					type="checkbox"
+					checked={logarithmic}
+					onchange={toggleLogarithmic}
+				>
+				Log scale
+			</label>
+			<label class="inline-flex items-center gap-1.5">
+				<input type="checkbox" checked={relative} onchange={toggleRelative}>
+				Relative to first
+			</label>
+		</div>
+	</div>
+	<p class="muted mb-1 text-compact">
+		{formatDay(runs[focusIndex].startedAt)}
+		· {focusRange}
+	</p>
+	<div class="min-w-0 overflow-hidden" bind:clientWidth={width}>
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+		<svg
+			{width}
+			{height}
+			class="block select-none"
+			role="img"
+			aria-label={`${title} for ${repos.length} repositories over ${runs.length} runs, ${relative ? "relative to first sample" : logarithmic ? "logarithmic scale" : "linear scale"}`}
+			tabindex="0"
+			{onpointermove}
+			onpointerleave={() => (hover.index = null)}
+			{onkeydown}
+		>
+			{#each ticks as tick (tick)}
+				<line
+					x1={margin.left}
+					x2={margin.left + plotWidth}
+					y1={y(tick)}
+					y2={y(tick)}
+					stroke="var(--hair)"
+				/>
+				<text
+					x={margin.left - 7}
+					y={y(tick) + 3.5}
+					text-anchor="end"
+					font-size="10.5"
+					fill="var(--muted)"
+				>
+					{displayFormat(tick)}
+				</text>
+			{/each}
+
+			{#each series as item (item.slug)}
+				<path
+					d={linePath(item.values)}
+					fill="none"
+					stroke={hue}
+					stroke-width="1.4"
+					stroke-linejoin="round"
+					stroke-linecap="round"
+					opacity="0.28"
+				>
+					<title>{item.slug}</title>
+				</path>
+			{/each}
+
+			{#each xTicks as index (index)}
+				<text
+					x={x(index)}
+					y={height - 5}
+					text-anchor={index === 0 ? "start" : index === runs.length - 1 ? "end" : "middle"}
+					font-size="10.5"
+					fill="var(--muted)"
+				>
+					{formatDay(runs[index].startedAt)}
+				</text>
+			{/each}
+
+			{#if focusIndex >= 0 && focusIndex < runs.length}
+				<line
+					x1={x(focusIndex)}
+					x2={x(focusIndex)}
+					y1={margin.top}
+					y2={margin.top + plotHeight}
+					stroke="var(--ink-2)"
+				/>
+				{#each focusValues as point (point.slug)}
+					<circle cx={x(focusIndex)} cy={y(point.value)} r="2.2" fill={hue}>
+						<title>{point.slug}: {displayFormat(point.value)}</title>
+					</circle>
+				{/each}
+			{/if}
+		</svg>
+	</div>
+</section>
