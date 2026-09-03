@@ -19,12 +19,23 @@ jobs:
     name: Build Biome (${{ inputs.biome-ref || 'main' }})
     timeout-minutes: 20
     runs-on: depot-ubuntu-24.04-arm-64
+    outputs:
+      biome_commit_sha: ${{ steps.biome-metadata.outputs.commit_sha }}
+      started_at: ${{ steps.run-start.outputs.started_at }}
     steps:
+      - name: Record run start
+        id: run-start
+        run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$GITHUB_OUTPUT"
+
       - name: Checkout Biome
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: biomejs/biome
           ref: ${{ inputs.biome-ref }}
+
+      - name: Record Biome commit
+        id: biome-metadata
+        run: echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Install toolchain
         uses: moonrepo/setup-rust@abb2d32350334249b178c401e5ec5836e0cd88d3 # v1.3
@@ -197,6 +208,10 @@ jobs:
     timeout-minutes: 5
     runs-on: depot-ubuntu-24.04-arm-16
     steps:
+      - name: Record job start
+        id: job-start
+        run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$GITHUB_OUTPUT"
+
       - name: Download Biome binary
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -215,11 +230,23 @@ jobs:
           ref: ${{ matrix.ref }}
           path: repository
 
+      - name: Record repository commit
+        id: repository-metadata
+        working-directory: repository
+        run: echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Migrate
-        continue-on-error: true
+        id: migrate
         working-directory: repository/${{ matrix.working-directory }}
         run: |
-          biome migrate --write
+          if ! biome migrate --write; then
+            outcome=failed
+          elif [[ -n "$(git status --porcelain)" ]]; then
+            outcome=succeeded_with_changes
+          else
+            outcome=succeeded_no_changes
+          fi
+          echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
 
       - name: Run Biome check and generate report
         if: ${{ ! cancelled() }}
@@ -272,6 +299,40 @@ jobs:
           name: ${{ (! inputs.biome-ref || inputs.biome-ref == 'main') && format('biome-report-{0}', matrix.id) || format('candidate-report-{0}', matrix.id) }}
           path: ${{ github.workspace }}/biome-report-${{ matrix.id }}.json
 
+      - name: Save target metadata
+        if: ${{ always() && steps.repository-metadata.outputs.commit_sha != '' }}
+        env:
+          TARGET_ID: ${{ matrix.id }}
+          REPOSITORY_SLUG: ${{ matrix.repository }}
+          REPOSITORY_COMMIT_SHA: ${{ steps.repository-metadata.outputs.commit_sha }}
+          JOB_STARTED_AT: ${{ steps.job-start.outputs.started_at }}
+          MIGRATION_OUTCOME: ${{ steps.migrate.outputs.outcome }}
+          CHECK_OUTCOME: ${{ steps.test.outputs.outcome }}
+        run: |
+          execution_status=completed
+          if [[ -z "$CHECK_OUTCOME" ]]; then
+            execution_status=error
+          fi
+          jq -n \
+            --arg id "$TARGET_ID" \
+            --arg repositorySlug "$REPOSITORY_SLUG" \
+            --arg repositoryCommitSha "$REPOSITORY_COMMIT_SHA" \
+            --arg jobStartedAt "$JOB_STARTED_AT" \
+            --arg jobCompletedAt "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" \
+            --arg migrationOutcome "${MIGRATION_OUTCOME:-not_run}" \
+            --arg executionStatus "$execution_status" \
+            '{id: $id, repositorySlug: $repositorySlug, repositoryCommitSha: $repositoryCommitSha, jobStartedAt: $jobStartedAt, jobCompletedAt: $jobCompletedAt, migrationOutcome: $migrationOutcome, executionStatus: $executionStatus}' \
+            > "target-metadata-$TARGET_ID.json"
+
+      - name: Upload target metadata
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          if-no-files-found: ignore
+          retention-days: 1
+          name: target-metadata-${{ matrix.id }}
+          path: target-metadata-${{ matrix.id }}.json
+
       - name: Save outcome JSON
         run: |
           echo '{"id": "${{ matrix.id }}", "outcome": "${{ steps.test.outputs.outcome }}"}' > "$GITHUB_WORKSPACE/outcome-${{ matrix.id }}.json"
@@ -284,6 +345,63 @@ jobs:
           retention-days: 1
           name: outcome-${{ matrix.id }}
           path: ${{ github.workspace }}/outcome-${{ matrix.id }}.json
+
+  publish-dashboard-data:
+    name: Publish dashboard data
+    if: ${{ always() && !cancelled() }}
+    needs:
+      - build-biome
+      - test-ecosystem
+    runs-on: depot-ubuntu-24.04-arm-16
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare artifact directories
+        run: mkdir -p published-reports target-metadata
+
+      - name: Download report artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: "*-report-*"
+          path: published-reports/
+          merge-multiple: true
+
+      - name: Download target metadata
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: target-metadata-*
+          path: target-metadata/
+          merge-multiple: true
+
+      - name: Publish reports and run manifest
+        env:
+          ECOSYSTEM_CI_UPLOAD_TOKEN: ${{ secrets.ECOSYSTEM_CI_UPLOAD_TOKEN }}
+        run: |
+          pnpm --dir dashboard exec tsx scripts/publish-run.ts \
+            --reports-dir ../published-reports \
+            --metadata-dir ../target-metadata \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --biome-branch "${{ inputs.biome-ref || 'main' }}" \
+            --biome-commit-sha "${{ needs.build-biome.outputs.biome_commit_sha }}" \
+            --started-at "${{ needs.build-biome.outputs.started_at }}" \
+            --completed-at "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
 
   notify-discord:
     name: Notify Discord
