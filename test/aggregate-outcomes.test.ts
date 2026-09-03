@@ -3,13 +3,13 @@
 /**
  * Tests for aggregate-outcomes script
  *
- * Run with: node --experimental-strip-types --test test/aggregate-outcomes.test.ts
+ * Run with: pnpm exec vitest run test/aggregate-outcomes.test.ts
  */
 
 import assert from "node:assert";
 import path from "node:path";
-import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { describe, test } from "vitest";
 import {
 	aggregateResults,
 	type BiomeReport,

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { linearDomain } from "../dashboard/src/lib/trends/domain.ts";
 
 test("soft relative span restrains small timing changes", () => {

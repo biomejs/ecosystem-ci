@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { selectBiomeBranch } from "../dashboard/src/lib/branches.ts";
 
 test("selectBiomeBranch defaults to main", () => {

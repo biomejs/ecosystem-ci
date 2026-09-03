@@ -1,3 +1,6 @@
+import { spawn } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import manifest from "../data/manifest.json";
 
 interface Report {
@@ -11,6 +14,28 @@ interface Report {
 		category?: string;
 		severity?: string;
 	}>;
+}
+
+const dashboardDirectory = fileURLToPath(new URL("..", import.meta.url));
+
+async function runWrangler(
+	arguments_: string[],
+	stdout: "ignore" | "inherit" = "inherit",
+): Promise<void> {
+	await new Promise<void>((resolvePromise, reject) => {
+		const child = spawn("pnpm", ["exec", "wrangler", ...arguments_], {
+			cwd: dashboardDirectory,
+			stdio: ["ignore", stdout, "inherit"],
+		});
+		child.once("error", reject);
+		child.once("close", (exitCode) => {
+			if (exitCode === 0) {
+				resolvePromise();
+				return;
+			}
+			reject(new Error(`wrangler exited with code ${exitCode}`));
+		});
+	});
 }
 
 function sql(value: string): string {
@@ -50,7 +75,7 @@ for (const run of manifest.runs) {
 
 	for (const result of run.results) {
 		const reportPath = new URL(`../data/${result.report}`, import.meta.url);
-		const report = (await Bun.file(reportPath).json()) as Report;
+		const report = JSON.parse(await readFile(reportPath, "utf8")) as Report;
 		const checkOutcome =
 			report.summary.errors > 0 || report.summary.warnings > 0
 				? "failed"
@@ -114,29 +139,17 @@ for (const run of manifest.runs) {
 	}
 }
 
-const dashboardDirectory = new URL("..", import.meta.url).pathname;
 const seedPath = "/tmp/biome-ecosystem-ci-dashboard-seed.sql";
-await Bun.write(seedPath, statements.join("\n"));
+await writeFile(seedPath, statements.join("\n"));
 
-const seed = Bun.spawn(
-	["bunx", "wrangler", "d1", "execute", "DB", "--local", "--file", seedPath],
-	{
-		cwd: dashboardDirectory,
-		stdout: "inherit",
-		stderr: "inherit",
-	},
-);
-
-if ((await seed.exited) !== 0) process.exit(1);
+await runWrangler(["d1", "execute", "DB", "--local", "--file", seedPath]);
 
 for (const run of manifest.runs) {
 	for (const result of run.results) {
 		const reportPath = new URL(`../data/${result.report}`, import.meta.url)
 			.pathname;
-		const upload = Bun.spawn(
+		await runWrangler(
 			[
-				"bunx",
-				"wrangler",
 				"r2",
 				"object",
 				"put",
@@ -147,14 +160,8 @@ for (const run of manifest.runs) {
 				"application/json",
 				"--local",
 			],
-			{
-				cwd: dashboardDirectory,
-				stdout: "ignore",
-				stderr: "inherit",
-			},
+			"ignore",
 		);
-
-		if ((await upload.exited) !== 0) process.exit(1);
 	}
 }
 

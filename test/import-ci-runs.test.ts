@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import test from "node:test";
+import { test } from "vitest";
 import {
 	isValidReport,
 	type ManifestRun,
@@ -77,11 +77,16 @@ test("parseWorkflowTargets reads repository IDs and optional refs", () => {
 test("parseWorkflowTargets reads the current ecosystem workflow", async () => {
 	const workflow = await readFile(".github/workflows/ecosystem-ci.yml", "utf8");
 	const targets = parseWorkflowTargets(workflow);
-	assert.equal(targets.length, 42);
-	assert.deepEqual(targets[0], { id: "django", repository: "django/django" });
+	assert.equal(targets.length, 43);
+	assert.deepEqual(targets[0], {
+		id: "django",
+		repository: "django/django",
+		ref: "73cc09f14f13fedddc14d6ba5b287cb33c24e4a4",
+	});
 	assert.deepEqual(targets.at(-1), {
-		id: "byline-cms",
-		repository: "Byline-CMS/bylinecms.dev",
+		id: "poketernity",
+		repository: "Despair-Games/poketernity",
+		ref: "7fb6d12a13d528a1b70536a1a3150dd6b7049daa",
 	});
 });
 

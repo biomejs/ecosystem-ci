@@ -1,0 +1,9 @@
+packages:
+  - dashboard
+
+allowBuilds:
+  esbuild: true
+  workerd: true
+
+minimumReleaseAgeExclude:
+  - "@biomejs/*"

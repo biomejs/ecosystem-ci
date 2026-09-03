@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import {
 	copyFile,
 	mkdir,
@@ -26,6 +27,12 @@ const dashboardDirectory = resolve(scriptDirectory, "..");
 const repositoryDirectory = resolve(dashboardDirectory, "..");
 const manifestPath = join(dashboardDirectory, "data", "manifest.json");
 const reportsDirectory = join(dashboardDirectory, "data", "reports");
+
+function sleep(milliseconds: number): Promise<void> {
+	return new Promise((resolvePromise) => {
+		setTimeout(resolvePromise, milliseconds);
+	});
+}
 
 export interface ImportOptions {
 	repository: string;
@@ -329,7 +336,7 @@ async function githubJson<T>(path: string): Promise<T> {
 			);
 		}
 		const retryAfter = Number(response.headers.get("retry-after") ?? attempt);
-		await Bun.sleep(Math.max(1, retryAfter) * 1000);
+		await sleep(Math.max(1, retryAfter) * 1000);
 	}
 	throw new Error("Unreachable");
 }
@@ -378,22 +385,37 @@ async function runCommand(
 	command: string[],
 	options: { cwd?: string; inherit?: boolean } = {},
 ): Promise<string> {
-	const child = Bun.spawn(command, {
-		cwd: options.cwd,
-		stdout: options.inherit ? "inherit" : "pipe",
-		stderr: options.inherit ? "inherit" : "pipe",
+	const [executable, ...arguments_] = command;
+	if (!executable) throw new Error("Cannot run an empty command");
+
+	return await new Promise((resolvePromise, reject) => {
+		const child = spawn(executable, arguments_, {
+			cwd: options.cwd,
+			stdio: options.inherit ? "inherit" : ["ignore", "pipe", "pipe"],
+		});
+		let stdout = "";
+		let stderr = "";
+		child.stdout?.setEncoding("utf8");
+		child.stderr?.setEncoding("utf8");
+		child.stdout?.on("data", (chunk: string) => {
+			stdout += chunk;
+		});
+		child.stderr?.on("data", (chunk: string) => {
+			stderr += chunk;
+		});
+		child.once("error", reject);
+		child.once("close", (exitCode) => {
+			if (exitCode !== 0) {
+				reject(
+					new Error(
+						`${command.join(" ")} failed with exit code ${exitCode}${stderr ? `: ${stderr.trim()}` : ""}`,
+					),
+				);
+				return;
+			}
+			resolvePromise(stdout.trim());
+		});
 	});
-	const [exitCode, stdout, stderr] = await Promise.all([
-		child.exited,
-		options.inherit ? Promise.resolve("") : new Response(child.stdout).text(),
-		options.inherit ? Promise.resolve("") : new Response(child.stderr).text(),
-	]);
-	if (exitCode !== 0) {
-		throw new Error(
-			`${command.join(" ")} failed with exit code ${exitCode}${stderr ? `: ${stderr.trim()}` : ""}`,
-		);
-	}
-	return stdout.trim();
 }
 
 interface GitHubTokenEnvironment {
@@ -463,7 +485,10 @@ async function downloadArtifact(
 					redirect: "follow",
 				});
 				if (response.ok) {
-					await Bun.write(destination, await response.arrayBuffer());
+					await writeFile(
+						destination,
+						Buffer.from(await response.arrayBuffer()),
+					);
 					return;
 				}
 				lastError = `${response.status} ${response.statusText}`;
@@ -471,7 +496,7 @@ async function downloadArtifact(
 			} catch (error) {
 				lastError = error instanceof Error ? error.message : String(error);
 			}
-			if (attempt < 3) await Bun.sleep(attempt * 1000);
+			if (attempt < 3) await sleep(attempt * 1000);
 		}
 	}
 	throw new Error(`Could not download ${artifact.name}: ${lastError}`);
@@ -849,8 +874,8 @@ function manifestWorkflow(options: ImportOptions): string {
 
 function printHelp(): void {
 	console.log(`Usage:
-  bun run reports:import
-  bun run reports:import 33193506807 32934641625
+  just reports-import
+  just reports-import 33193506807 32934641625
 
 With no run IDs, the importer finds completed runs from the last ${REPORT_RETENTION_DAYS} days that are not in the manifest.
 
@@ -935,7 +960,7 @@ async function main(): Promise<void> {
 
 		if (options.seed) {
 			console.log("Reseeding local D1 and R2...");
-			await runCommand(["bun", "run", "db:seed:local"], {
+			await runCommand(["pnpm", "run", "db:seed:local"], {
 				cwd: dashboardDirectory,
 				inherit: true,
 			});
@@ -948,7 +973,11 @@ async function main(): Promise<void> {
 	}
 }
 
-if (import.meta.main) {
+const isMainModule =
+	process.argv[1] !== undefined &&
+	resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
 	main().catch((error) => {
 		console.error(error instanceof Error ? error.message : error);
 		process.exitCode = 1;

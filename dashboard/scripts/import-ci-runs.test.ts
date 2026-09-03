@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { loadManifest, resolveGitHubToken } from "./import-ci-runs";
 
 describe("resolveGitHubToken", () => {

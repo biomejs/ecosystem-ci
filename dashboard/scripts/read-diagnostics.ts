@@ -188,7 +188,7 @@ export function formatDiagnostic(
 }
 
 function showHelp(): void {
-	console.info(`Usage: bun run reports:diagnostics <repository> [options]
+	console.info(`Usage: just reports-diagnostics <repository> [options]
 
 Read diagnostics from dashboard/data/reports. The newest run is used by default.
 
@@ -207,10 +207,10 @@ Options:
   -h, --help                Show this help
 
 Examples:
-  bun run reports:diagnostics astro
-  bun run reports:diagnostics astro --severity error --category lint
-  bun run reports:diagnostics withastro/astro --run 33613560701 --path packages
-  bun run reports:diagnostics astro --search useImportType --all
+  just reports-diagnostics astro
+  just reports-diagnostics astro --severity error --category lint
+  just reports-diagnostics withastro/astro --run 33613560701 --path packages
+  just reports-diagnostics astro --search useImportType --all
 `);
 }
 

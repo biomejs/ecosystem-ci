@@ -13,23 +13,24 @@ Failure and successes are reported on the [github-ecosystem-ci](https://discord.
 
 ## Dashboard
 
-The SvelteKit dashboard is a Bun workspace in [`dashboard/`](dashboard/). Run it from the repository root:
+The SvelteKit dashboard is a pnpm workspace in [`dashboard/`](dashboard/). Run it from the repository root:
 
 ```sh
-bun install
-bun run dev
+corepack enable
+pnpm install
+just dev
 ```
 
-Use `bun run check` and `bun run build` to validate the dashboard. The existing ecosystem CI tests remain available through `bun run test`.
+Run `just ci` to lint, test, type-check, and build the project.
 
 ### Reading raw diagnostics
 
 Use `reports:diagnostics` to read diagnostics from the reports in `dashboard/data/reports`. Pass a report id or repository slug. The command reads the newest run unless you pass `--run`.
 
 ```sh
-bun run reports:diagnostics astro
-bun run reports:diagnostics astro --severity error --category lint
-bun run reports:diagnostics withastro/astro --run 33613560701 --path packages
+just reports-diagnostics astro
+just reports-diagnostics astro --severity error --category lint
+just reports-diagnostics withastro/astro --run 33613560701 --path packages
 ```
 
 The command prints at most 100 matching diagnostics by default. Pass `--all` to print all of them, `--json` for JSON, or `--help` for every filter.

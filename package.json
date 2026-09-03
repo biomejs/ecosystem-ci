@@ -1,23 +1,21 @@
 {
 	"name": "biome-ecosystem-ci",
 	"private": true,
-	"packageManager": "bun@1.3.3",
+	"packageManager": "pnpm@11.25.0",
 	"type": "module",
-	"workspaces": [
-		"dashboard"
-	],
 	"scripts": {
-		"lint": "biome ci .",
-		"test": "node --experimental-strip-types --test test/*.test.ts",
-		"test:dashboard": "bun test dashboard/scripts/import-ci-runs.test.ts",
-		"dev": "bun run --cwd dashboard dev",
-		"build": "bun run --cwd dashboard build",
-		"check": "bun run --cwd dashboard check",
-		"reports:import": "bun run --cwd dashboard reports:import",
-		"reports:diagnostics": "bun run --cwd dashboard reports:diagnostics",
-		"deploy": "bun run --cwd dashboard deploy"
+		"lint": "biome check",
+		"test": "vitest run",
+		"dev": "pnpm --dir dashboard run dev",
+		"build": "pnpm --dir dashboard run build",
+		"check": "pnpm --dir dashboard run check",
+		"reports:import": "pnpm --dir dashboard run reports:import",
+		"reports:diagnostics": "pnpm --dir dashboard run reports:diagnostics",
+		"deploy": "pnpm --dir dashboard run deploy"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.11"
+		"@biomejs/biome": "2.5.12",
+		"tsx": "^4.20.5",
+		"vitest": "^4.1.11"
 	}
 }

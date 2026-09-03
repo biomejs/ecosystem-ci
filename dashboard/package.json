@@ -7,14 +7,14 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"deploy": "bun run build && wrangler deploy",
+		"deploy": "pnpm run build && wrangler deploy",
 		"cf-typegen": "wrangler types cloudflare-env.d.ts",
 		"db:migrate:local": "wrangler d1 migrations apply DB --local",
 		"db:migrate:remote": "wrangler d1 migrations apply DB --remote",
-		"db:seed:local": "bun run scripts/seed-local.ts",
-		"db:setup:local": "bun run db:migrate:local && bun run db:seed:local",
-		"reports:import": "bun run scripts/import-ci-runs.ts",
-		"reports:diagnostics": "bun run scripts/read-diagnostics.ts"
+		"db:seed:local": "tsx scripts/seed-local.ts",
+		"db:setup:local": "pnpm run db:migrate:local && pnpm run db:seed:local",
+		"reports:import": "tsx scripts/import-ci-runs.ts",
+		"reports:diagnostics": "tsx scripts/read-diagnostics.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260819.1",
