@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"lint": "biome check",
-		"test": "vitest run",
+		"test": "pnpm --dir dashboard exec svelte-kit sync && vitest run",
 		"dev": "pnpm --dir dashboard run dev",
 		"build": "pnpm --dir dashboard run build",
 		"check": "pnpm --dir dashboard run check",
