@@ -1,3 +1,4 @@
+import type { TimingStats } from "$lib/timing";
 import type { RepositoryComparison, RunObservation } from "./types";
 
 const MIN_TIMING_PERCENT = 20;
@@ -44,11 +45,17 @@ export function diagnosticDelta(row: RepositoryComparison): number {
 	return diagnosticTotal(row.head) - diagnosticTotal(row.base);
 }
 
+/** the statistic a comparison is judged on; the others are shown alongside it */
+export const medianMs = (stats: TimingStats | null): number | null =>
+	stats === null ? null : stats.median;
+
 function timingSignal(
-	base: number | null,
-	head: number | null,
+	baseStats: TimingStats | null,
+	headStats: TimingStats | null,
 	minimumChangeMs: number,
 ): number {
+	const base = medianMs(baseStats);
+	const head = medianMs(headStats);
 	if (base === null || head === null) return 0;
 	const percentage = percentDelta(base, head);
 	if (
@@ -79,8 +86,8 @@ export function reviewKind(
 	row: RepositoryComparison,
 ): "better" | "quiet" | "worse" {
 	const signals = [
-		timingSignal(row.base.checkMs, row.head.checkMs, MIN_CHECK_CHANGE_MS),
-		timingSignal(row.base.scannerMs, row.head.scannerMs, MIN_SCANNER_CHANGE_MS),
+		timingSignal(row.base.check, row.head.check, MIN_CHECK_CHANGE_MS),
+		timingSignal(row.base.scanner, row.head.scanner, MIN_SCANNER_CHANGE_MS),
 		diagnosticSignal(row),
 		Math.sign(row.head.panics - row.base.panics),
 	];
@@ -90,9 +97,11 @@ export function reviewKind(
 }
 
 export function impact(row: RepositoryComparison): number {
-	const check = Math.abs(percentDelta(row.base.checkMs, row.head.checkMs) ?? 0);
+	const check = Math.abs(
+		percentDelta(medianMs(row.base.check), medianMs(row.head.check)) ?? 0,
+	);
 	const scanner = Math.abs(
-		percentDelta(row.base.scannerMs, row.head.scannerMs) ?? 0,
+		percentDelta(medianMs(row.base.scanner), medianMs(row.head.scanner)) ?? 0,
 	);
 	const diagnostics = Math.abs(
 		relativeDelta(diagnosticTotal(row.base), diagnosticTotal(row.head)),

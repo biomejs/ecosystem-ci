@@ -205,7 +205,8 @@ jobs:
 
     name: Test ${{ matrix.id }}
     needs: build-biome
-    timeout-minutes: 5
+    # Five repetitions of the largest check take about five minutes; leave headroom.
+    timeout-minutes: 15
     runs-on: depot-ubuntu-24.04-arm-16
     steps:
       - name: Record job start
@@ -252,20 +253,60 @@ jobs:
         if: ${{ ! cancelled() }}
         id: test
         working-directory: repository/${{ matrix.working-directory }}
+        env:
+          # Number of identical repetitions of the check. Each repetition that
+          # writes a valid report contributes one timing sample.
+          CHECK_SAMPLES: 5
         run: |
           # Define report file path
           REPORT_FILE="$GITHUB_WORKSPACE/biome-report-${{ matrix.id }}.json"
+          REPETITION_FILE="$REPORT_FILE.repetition"
 
-          # Run biome check with JSON reporter to file, capture exit code but always succeed
-          # Using --reporter=json with --reporter-file writes JSON to the file
-          # The diagnostic limit is automatically lifted when using non-default reporters
-          set +e
-          biome check --error-on-warnings --reporter=json --reporter-file="$REPORT_FILE" ${{ matrix.arguments || '.' }}
-          BIOME_EXIT_CODE=$?
-          set -e
+          # Every repetition runs the identical command with the JSON reporter to a
+          # file (the diagnostic limit is lifted for non-default reporters). The last
+          # valid repetition becomes the published raw report and decides the outcome.
+          samples='[]'
+          first_diagnostics=''
+          OUTCOME_EXIT_CODE=''
 
-          # Set outcome based on exit code
-          if [ $BIOME_EXIT_CODE -eq 0 ]; then
+          for ((ordinal = 1; ordinal <= CHECK_SAMPLES; ordinal++)); do
+            rm -f "$REPETITION_FILE"
+            set +e
+            biome check --error-on-warnings --reporter=json --reporter-file="$REPETITION_FILE" ${{ matrix.arguments || '.' }}
+            BIOME_EXIT_CODE=$?
+            set -e
+
+            if [ ! -s "$REPETITION_FILE" ]; then
+              echo "::warning::Repetition $ordinal produced no report (exit code $BIOME_EXIT_CODE)"
+              continue
+            fi
+            sample=$(jq -ce --argjson ordinal "$ordinal" '
+              select((.summary.duration | type) == "number" and (.summary.scannerDuration | type) == "number")
+              | {ordinal: $ordinal, checkDurationNs: .summary.duration, scannerDurationNs: .summary.scannerDuration}
+            ' "$REPETITION_FILE") || {
+              echo "::warning::Repetition $ordinal produced a report without timings (exit code $BIOME_EXIT_CODE)"
+              continue
+            }
+            samples=$(jq -c --argjson sample "$sample" '. + [$sample]' <<< "$samples")
+            mv "$REPETITION_FILE" "$REPORT_FILE"
+            OUTCOME_EXIT_CODE=$BIOME_EXIT_CODE
+            echo "Repetition $ordinal: check $(jq -r '.checkDurationNs / 1e6 | floor' <<< "$sample") ms, scanner $(jq -r '.scannerDurationNs / 1e6 | floor' <<< "$sample") ms, exit code $BIOME_EXIT_CODE"
+
+            # Repetitions must agree on what they found; a difference means non-determinism.
+            diagnostics=$(jq '.diagnostics | length' "$REPORT_FILE")
+            if [ -z "$first_diagnostics" ]; then
+              first_diagnostics=$diagnostics
+            elif [ "$diagnostics" != "$first_diagnostics" ]; then
+              echo "::warning::Repetition $ordinal reported $diagnostics diagnostics but the first valid repetition reported $first_diagnostics"
+            fi
+          done
+          rm -f "$REPETITION_FILE"
+
+          echo "timing_samples=$samples" >> "$GITHUB_OUTPUT"
+          echo "Collected $(jq 'length' <<< "$samples") timing samples"
+
+          # Set outcome based on the exit code of the repetition that produced the report
+          if [ "$OUTCOME_EXIT_CODE" = "0" ]; then
             echo "outcome=success" >> "$GITHUB_OUTPUT"
           else
             echo "outcome=failure" >> "$GITHUB_OUTPUT"
@@ -308,6 +349,7 @@ jobs:
           JOB_STARTED_AT: ${{ steps.job-start.outputs.started_at }}
           MIGRATION_OUTCOME: ${{ steps.migrate.outputs.outcome }}
           CHECK_OUTCOME: ${{ steps.test.outputs.outcome }}
+          TIMING_SAMPLES: ${{ steps.test.outputs.timing_samples }}
         run: |
           execution_status=completed
           if [[ -z "$CHECK_OUTCOME" ]]; then
@@ -321,7 +363,8 @@ jobs:
             --arg jobCompletedAt "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" \
             --arg migrationOutcome "${MIGRATION_OUTCOME:-not_run}" \
             --arg executionStatus "$execution_status" \
-            '{id: $id, repositorySlug: $repositorySlug, repositoryCommitSha: $repositoryCommitSha, jobStartedAt: $jobStartedAt, jobCompletedAt: $jobCompletedAt, migrationOutcome: $migrationOutcome, executionStatus: $executionStatus}' \
+            --argjson timingSamples "${TIMING_SAMPLES:-[]}" \
+            '{id: $id, repositorySlug: $repositorySlug, repositoryCommitSha: $repositoryCommitSha, jobStartedAt: $jobStartedAt, jobCompletedAt: $jobCompletedAt, migrationOutcome: $migrationOutcome, executionStatus: $executionStatus, timingSamples: $timingSamples}' \
             > "target-metadata-$TARGET_ID.json"
 
       - name: Upload target metadata

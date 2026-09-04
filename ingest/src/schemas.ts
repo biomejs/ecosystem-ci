@@ -27,11 +27,26 @@ export const RepositorySlugSchema = z
 		"Must be a full GitHub repository slug",
 	);
 
+export const TimingSampleSchema = z.object({
+	ordinal: PositiveIntegerSchema,
+	checkDurationNs: NonNegativeIntegerSchema,
+	scannerDurationNs: NonNegativeIntegerSchema,
+});
+export const TimingSamplesSchema = z
+	.array(TimingSampleSchema)
+	.refine(
+		(samples) =>
+			new Set(samples.map((sample) => sample.ordinal)).size === samples.length,
+		{ error: "Timing sample ordinals must be unique" },
+	);
+
 export const ManifestTargetSchema = z
 	.object({
 		repositoryCommitSha: CommitShaSchema,
 		jobStartedAt: TimestampSchema,
 		jobCompletedAt: TimestampSchema,
+		/** one sample per repetition of the check; absent in schema version 1 */
+		timingSamples: TimingSamplesSchema.optional(),
 		migrationOutcome: z.enum([
 			"not_run",
 			"failed",
@@ -57,7 +72,7 @@ export const ManifestTargetSchema = z
 
 export const RunManifestSchema = z
 	.object({
-		schemaVersion: z.literal(1),
+		schemaVersion: z.union([z.literal(1), z.literal(2)]),
 		githubRunId: PositiveIntegerSchema,
 		runAttempt: PositiveIntegerSchema,
 		biomeBranch: z.string().min(1),
@@ -170,3 +185,4 @@ export type ManifestTarget = z.infer<typeof ManifestTargetSchema>;
 export type R2EventNotification = z.infer<typeof R2EventNotificationSchema>;
 export type RawReport = z.infer<typeof RawReportSchema>;
 export type RunManifest = z.infer<typeof RunManifestSchema>;
+export type TimingSample = z.infer<typeof TimingSampleSchema>;

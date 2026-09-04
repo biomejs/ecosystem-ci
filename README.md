@@ -2,6 +2,7 @@
 
 This repository is used to run integration tests for Biome.
 Every integration test checkout a project that uses Biome and test Biome against it.
+Each project's check runs five times in a row. Every repetition records a timing sample (check duration and scanner duration), and the last report written is the one that gets published, so timing can be reasoned about statistically instead of from one measurement.
 
 ## Execution
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 // One metric for one repository. A detected change is drawn as the baseline (grey
-// hairline) and the change point (vertical marker in the metric's hue).
+// hairline) and the change point (vertical marker in the metric's hue). Time metrics
+// also draw the min–max band of each run's samples behind the median line.
 import type { Run } from "./data";
 import { linearDomain } from "./domain";
 import { formatDay, niceTicks } from "./format";
@@ -17,10 +18,13 @@ let {
 	softRelativeSpan = null,
 	minimumSpan = null,
 	markers = [],
+	ranges = [],
 	ariaLabel,
 }: {
 	runs: Run[];
 	values: (number | null)[];
+	/** [min, max] of each run's samples, aligned with values; drawn as a band */
+	ranges?: ([number, number] | null)[];
 	hue: string;
 	zeroBased?: boolean;
 	height?: number;
@@ -48,7 +52,12 @@ const pw = $derived(Math.max(10, width - m.left - m.right));
 const ph = $derived(height - m.top - m.bottom);
 
 const domain = $derived(
-	linearDomain(values, { baseline, zeroBased, softRelativeSpan, minimumSpan }),
+	linearDomain([...values, ...ranges.flatMap((r) => (r === null ? [] : r))], {
+		baseline,
+		zeroBased,
+		softRelativeSpan,
+		minimumSpan,
+	}),
 );
 const ticks = $derived(
 	niceTicks(domain[0], domain[1], 3).filter(
@@ -73,6 +82,30 @@ const path = $derived.by(() => {
 		d += `${pen ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)} `;
 		pen = true;
 	});
+	return d;
+});
+
+/** closed shapes between min and max, one per contiguous stretch of runs with samples */
+const bandPath = $derived.by(() => {
+	let d = "";
+	let top: string[] = [];
+	let bottom: string[] = [];
+	const flush = () => {
+		if (top.length > 1) {
+			d += `M${top.join(" L")} L${bottom.reverse().join(" L")} Z `;
+		}
+		top = [];
+		bottom = [];
+	};
+	ranges.forEach((r, i) => {
+		if (r === null || values[i] === null) {
+			flush();
+			return;
+		}
+		top.push(`${x(i).toFixed(1)} ${y(r[1]).toFixed(1)}`);
+		bottom.push(`${x(i).toFixed(1)} ${y(r[0]).toFixed(1)}`);
+	});
+	flush();
 	return d;
 });
 
@@ -163,6 +196,9 @@ function onkeydown(e: KeyboardEvent) {
 			{/each}
 		{/if}
 
+		{#if bandPath}
+			<path d={bandPath} fill={hue} opacity="0.18" />
+		{/if}
 		<path
 			d={path}
 			fill="none"

@@ -20,6 +20,10 @@ const target: TargetArtifact = {
 	jobCompletedAt: "2026-09-03T10:02:00.000Z",
 	migrationOutcome: "succeeded_no_changes",
 	executionStatus: "completed",
+	timingSamples: [
+		{ ordinal: 1, checkDurationNs: 320, scannerDurationNs: 210 },
+		{ ordinal: 2, checkDurationNs: 300, scannerDurationNs: 200 },
+	],
 };
 
 describe("run publication", () => {
@@ -35,6 +39,7 @@ describe("run publication", () => {
 			},
 			[target],
 		);
+		expect(manifest.schemaVersion).toBe(2);
 		expect(manifest.targets).toEqual({
 			"withastro/astro": {
 				repositoryCommitSha: target.repositoryCommitSha,
@@ -42,9 +47,26 @@ describe("run publication", () => {
 				jobCompletedAt: target.jobCompletedAt,
 				migrationOutcome: "succeeded_no_changes",
 				executionStatus: "completed",
+				timingSamples: target.timingSamples,
 			},
 		});
 		expect(JSON.stringify(manifest)).not.toContain("reportKey");
+	});
+
+	test("publishes an empty sample list for metadata without samples", () => {
+		const { timingSamples: _omitted, ...withoutSamples } = target;
+		const manifest = buildRunManifest(
+			{
+				githubRunId: 123,
+				runAttempt: 2,
+				biomeBranch: "main",
+				biomeCommitSha: "a".repeat(40),
+				startedAt: "2026-09-03T10:00:00.000Z",
+				completedAt: "2026-09-03T10:05:00.000Z",
+			},
+			[withoutSamples],
+		);
+		expect(manifest.targets["withastro/astro"].timingSamples).toEqual([]);
 	});
 
 	test("builds immutable attempt-specific R2 keys", () => {

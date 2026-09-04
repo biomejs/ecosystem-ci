@@ -157,11 +157,12 @@ export function buildRunManifest(
 				jobCompletedAt: target.jobCompletedAt,
 				migrationOutcome: target.migrationOutcome,
 				executionStatus: target.executionStatus,
+				timingSamples: target.timingSamples ?? [],
 			},
 		]),
 	);
 	return RunManifestSchema.parse({
-		schemaVersion: 1,
+		schemaVersion: 2,
 		githubRunId: options.githubRunId,
 		runAttempt: options.runAttempt,
 		biomeBranch: options.biomeBranch,

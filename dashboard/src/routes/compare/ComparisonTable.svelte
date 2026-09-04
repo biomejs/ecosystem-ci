@@ -1,10 +1,12 @@
 <script lang="ts">
+import type { TimingStats } from "$lib/timing";
 import { formatCount, formatMs, formatPct } from "$lib/trends/format";
 import {
 	deltaColor,
 	diagnosticDelta,
 	diagnosticTotal,
 	impact,
+	medianMs,
 	percentDelta,
 	relativeDelta,
 	reviewKind,
@@ -42,6 +44,38 @@ const color = (kind: ReturnType<typeof reviewKind>): string =>
 			: "var(--muted)";
 </script>
 
+{#snippet timingCell(label: string, base: TimingStats | null, head: TimingStats | null)}
+	{const delta = $derived(percentDelta(medianMs(base), medianMs(head)))}
+	<div class="metric-cell">
+		<span class="mobile-label">{label}</span>
+		<strong
+			>{base === null ? "—" : formatMs(base.median)}
+			→
+			{head === null ? "—" : formatMs(head.median)}</strong
+		>
+		<span class="delta" style:color={deltaColor(delta)}>
+			{delta === null ? "no delta" : formatPct(delta)}
+			<span class="stat-note">median</span>
+		</span>
+		{#if base !== null || head !== null}
+			<dl class="stat-grid">
+				<dt>min</dt>
+				<dd>{base === null ? "—" : formatMs(base.min)}</dd>
+				<dd>{head === null ? "—" : formatMs(head.min)}</dd>
+				<dt>mean</dt>
+				<dd>{base === null ? "—" : formatMs(base.mean)}</dd>
+				<dd>{head === null ? "—" : formatMs(head.mean)}</dd>
+				<dt>max</dt>
+				<dd>{base === null ? "—" : formatMs(base.max)}</dd>
+				<dd>{head === null ? "—" : formatMs(head.max)}</dd>
+				<dt>samples</dt>
+				<dd>{base === null ? "—" : base.count}</dd>
+				<dd>{head === null ? "—" : head.count}</dd>
+			</dl>
+		{/if}
+	</div>
+{/snippet}
+
 <section aria-label="Repository comparison">
 	<header class="variant-heading">
 		<div class="summary-strip">
@@ -67,10 +101,6 @@ const color = (kind: ReturnType<typeof reviewKind>): string =>
 		</div>
 		{#each rows as row (row.repositorySlug)}
 			{const kind = $derived(reviewKind(row))}
-			{const check = $derived(percentDelta(row.base.checkMs, row.head.checkMs))}
-			{const scanner = $derived(
-				percentDelta(row.base.scannerMs, row.head.scannerMs),
-			)}
 			{const diagnostics = $derived(diagnosticDelta(row))}
 			{const diagnosticsRate = $derived(
 				relativeDelta(diagnosticTotal(row.base), diagnosticTotal(row.head)),
@@ -88,42 +118,22 @@ const color = (kind: ReturnType<typeof reviewKind>): string =>
 						</span>
 					</div>
 				</div>
-				<div class="metric-cell">
-					<span class="mobile-label">Check time</span>
-					<strong
-						>{row.base.checkMs === null ? "—" : formatMs(row.base.checkMs)}
-						→
-						{row.head.checkMs === null ? "—" : formatMs(row.head.checkMs)}</strong
-					>
-					<span style:color={deltaColor(check)}>
-						{check === null ? "no delta" : formatPct(check)}
-					</span>
-				</div>
-				<div class="metric-cell">
-					<span class="mobile-label">Scanner time</span>
-					<strong
-						>{row.base.scannerMs === null ? "—" : formatMs(row.base.scannerMs)}
-						→
-						{row.head.scannerMs === null ? "—" : formatMs(row.head.scannerMs)}</strong
-					>
-					<span style:color={deltaColor(scanner)}>
-						{scanner === null ? "no delta" : formatPct(scanner)}
-					</span>
-				</div>
+				{@render timingCell("Check time", row.base.check, row.head.check)}
+				{@render timingCell("Scanner time", row.base.scanner, row.head.scanner)}
 				<div class="metric-cell">
 					<span class="mobile-label">Diagnostics</span>
 					<strong
 						>{formatCount(diagnosticTotal(row.base))}
 						→ {formatCount(diagnosticTotal(row.head))}</strong
 					>
-					<span style:color={deltaColor(diagnosticsRate)}>
+					<span class="delta" style:color={deltaColor(diagnosticsRate)}>
 						{signedCount(diagnostics)}
 					</span>
 				</div>
 				<div class="metric-cell">
 					<span class="mobile-label">Panics</span>
 					<strong>{row.base.panics} → {row.head.panics}</strong>
-					<span style:color={deltaColor(panics, 1)}>
+					<span class="delta" style:color={deltaColor(panics, 1)}>
 						{signedCount(panics)}
 					</span>
 				</div>
@@ -227,7 +237,7 @@ const color = (kind: ReturnType<typeof reviewKind>): string =>
 }
 
 .metric-cell strong,
-.metric-cell > span:last-child {
+.metric-cell > .delta {
 	display: block;
 }
 
@@ -237,9 +247,29 @@ const color = (kind: ReturnType<typeof reviewKind>): string =>
 	white-space: nowrap;
 }
 
-.metric-cell > span:last-child {
+.metric-cell > .delta {
 	margin-top: 0.2rem;
 	font-size: 0.76rem;
+}
+
+.stat-note {
+	color: var(--muted);
+}
+
+.stat-grid {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+	gap: 0 0.6rem;
+	margin: 0.35rem 0 0;
+	color: var(--muted);
+	font-size: 0.7rem;
+	line-height: 1.35;
+}
+
+.stat-grid dt,
+.stat-grid dd {
+	margin: 0;
+	white-space: nowrap;
 }
 
 .mobile-label {

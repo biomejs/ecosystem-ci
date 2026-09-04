@@ -54,6 +54,12 @@ interface ManifestResult {
 	jobStartedAt: string;
 	jobCompletedAt: string;
 	report: string;
+	/** one entry per repetition of the check; absent for imported artifacts */
+	timingSamples?: Array<{
+		ordinal: number;
+		checkDurationNs: number;
+		scannerDurationNs: number;
+	}>;
 }
 
 export interface ManifestRun {

@@ -1,5 +1,6 @@
 // Shapes the page's server data into one series per repository × metric.
 import type { HistoryPoint, RunSummary } from "$lib/server/runs";
+import { type TimingStats, timingStatsMs } from "$lib/timing";
 import { formatCount, formatMs, formatPct, signed } from "./format";
 
 export type MetricKey = "checkMs" | "scannerMs" | "parse" | "panics";
@@ -88,8 +89,13 @@ export interface Run {
 }
 
 export interface Cell {
+	/** median of the run's check samples; the plotted point */
 	checkMs: number | null;
+	/** median of the run's scanner samples; the plotted point */
 	scannerMs: number | null;
+	/** every statistic over the run's check samples, null without samples */
+	check: TimingStats | null;
+	scanner: TimingStats | null;
 	parse: number | null;
 	panics: number | null;
 	errors: number | null;
@@ -114,6 +120,8 @@ export interface Dataset {
 const EMPTY: Cell = {
 	checkMs: null,
 	scannerMs: null,
+	check: null,
+	scanner: null,
 	parse: null,
 	panics: null,
 	errors: null,
@@ -149,10 +157,12 @@ export function buildDataset(
 		cells: branchRuns.map((r) => {
 			const p = byRunAndSlug.get(`${r.githubRunId}:${slug}`);
 			if (!p) return EMPTY;
+			const { check, scanner } = timingStatsMs(p.timingSamples);
 			return {
-				checkMs: p.checkDurationNs === null ? null : p.checkDurationNs / 1e6,
-				scannerMs:
-					p.scannerDurationNs === null ? null : p.scannerDurationNs / 1e6,
+				checkMs: check === null ? null : check.median,
+				scannerMs: scanner === null ? null : scanner.median,
+				check,
+				scanner,
 				parse: p.parseDiagnostics,
 				panics: p.panics,
 				errors: p.ruleErrors,
@@ -169,6 +179,35 @@ export function buildDataset(
 
 export const seriesValues = (repo: Repo, key: ValueKey): (number | null)[] =>
 	repo.cells.map((c) => c[key]);
+
+/** the per-run sample statistics behind a time series; null for count metrics */
+export const seriesStats = (
+	repo: Repo,
+	key: ValueKey,
+): (TimingStats | null)[] | null =>
+	key === "checkMs"
+		? repo.cells.map((c) => c.check)
+		: key === "scannerMs"
+			? repo.cells.map((c) => c.scanner)
+			: null;
+
+/** [min, max] of each run's samples, null where there are none */
+export const seriesRanges = (
+	repo: Repo,
+	key: ValueKey,
+): ([number, number] | null)[] =>
+	(seriesStats(repo, key) ?? repo.cells.map(() => null)).map((s) =>
+		s === null ? null : [s.min, s.max],
+	);
+
+/** "1.15 s–1.31 s · 5 samples", or just the count when the range is flat at display precision */
+export function formatSampleSummary(s: TimingStats): string {
+	const noun = s.count === 1 ? "sample" : "samples";
+	const low = formatMs(s.min);
+	const high = formatMs(s.max);
+	if (s.count === 1 || low === high) return `${s.count} ${noun}`;
+	return `${low}–${high} · ${s.count} ${noun}`;
+}
 
 export function lastDefined(
 	vals: (number | null)[],

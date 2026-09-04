@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+import { parseTimingSamples, timingStatsMs } from "$lib/timing";
 import type { PageServerLoad } from "./$types";
 import type {
 	ComparisonRun,
@@ -17,8 +18,7 @@ interface RunRow {
 interface ObservationRow {
 	run_id: number;
 	repository_slug: string;
-	check_duration_ns: number | null;
-	scanner_duration_ns: number | null;
+	timing_samples: string | null;
 	errors: number;
 	warnings: number;
 	infos: number;
@@ -35,13 +35,12 @@ function requestedRun(
 }
 
 function observation(row: ObservationRow): RunObservation {
+	const { check, scanner } = timingStatsMs(
+		parseTimingSamples(row.timing_samples),
+	);
 	return {
-		checkMs:
-			row.check_duration_ns === null ? null : row.check_duration_ns / 1_000_000,
-		scannerMs:
-			row.scanner_duration_ns === null
-				? null
-				: row.scanner_duration_ns / 1_000_000,
+		check,
+		scanner,
 		errors: row.errors,
 		warnings: row.warnings,
 		infos: row.infos,
@@ -91,8 +90,19 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		`SELECT
 			rr.run_id,
 			rr.repository_slug,
-			rr.check_duration_ns,
-			rr.scanner_duration_ns,
+			(
+				SELECT json_group_array(json_object(
+					'ordinal', cs.ordinal,
+					'checkDurationNs', cs.check_duration_ns,
+					'scannerDurationNs', cs.scanner_duration_ns
+				))
+				FROM (
+					SELECT ordinal, check_duration_ns, scanner_duration_ns
+					FROM check_samples
+					WHERE repository_result_id = rr.id
+					ORDER BY ordinal
+				) AS cs
+			) AS timing_samples,
 			COALESCE(SUM(CASE WHEN dc.kind = 'rule' AND dc.severity = 'error' THEN dc.count ELSE 0 END), 0) AS errors,
 			COALESCE(SUM(CASE WHEN dc.kind = 'rule' AND dc.severity = 'warning' THEN dc.count ELSE 0 END), 0) AS warnings,
 			COALESCE(SUM(CASE WHEN dc.kind = 'rule' AND dc.severity = 'info' THEN dc.count ELSE 0 END), 0) AS infos,

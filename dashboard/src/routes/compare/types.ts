@@ -6,9 +6,12 @@ export interface ComparisonRun {
 	results: number;
 }
 
+import type { TimingStats } from "$lib/timing";
+
 export interface RunObservation {
-	checkMs: number | null;
-	scannerMs: number | null;
+	/** statistics over the run's timing samples, in milliseconds; null without samples */
+	check: TimingStats | null;
+	scanner: TimingStats | null;
 	errors: number;
 	warnings: number;
 	infos: number;

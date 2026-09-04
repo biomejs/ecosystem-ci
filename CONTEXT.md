@@ -29,7 +29,11 @@ The observations collected for one customer repository during one run. No reposi
 _Avoid_: Project result, target result
 
 **Raw report**:
-The unaggregated output produced by Biome for one customer repository during a run attempt. Its presence is required for a repository result to exist.
+The unaggregated output produced by Biome for one customer repository during a run attempt. Its presence is required for a repository result to exist. It is the output of the last repetition of the check that produced one.
+
+**Timing sample**:
+The check duration and scanner duration observed during one repetition of Biome's check on a customer repository within a run attempt. A repository result's timing is its set of timing samples in repetition order. Statistics such as the median, minimum, maximum, and mean are computed when the samples are read; no single sample or statistic is stored in their place.
+_Avoid_: Check time as a single number, headline duration
 
 **Ingestion**:
 The acceptance of a published run attempt into the dashboard's run history.

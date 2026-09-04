@@ -1,8 +1,10 @@
 <script lang="ts">
 import StickyHorizontalScroll from "$lib/StickyHorizontalScroll.svelte";
+import type { TimingStats } from "$lib/timing";
 import {
 	buildDataset,
 	formatDeltaShort,
+	formatSampleSummary,
 	isTime,
 	lastDefined,
 	METRICS,
@@ -11,6 +13,8 @@ import {
 	SEVERITIES,
 	SEVERITY_LABEL,
 	SEVERITY_NOTE,
+	seriesRanges,
+	seriesStats,
 	seriesValues,
 	severityTotals,
 } from "$lib/trends/data";
@@ -84,10 +88,19 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 
 <svelte:head><title>Ecosystem CI</title></svelte:head>
 
-{#snippet deltaCell(m: Metric, vals: (number | null)[], f: Finding | undefined)}
+{#snippet deltaCell(
+	m: Metric,
+	vals: (number | null)[],
+	stats: (TimingStats | null)[] | null,
+	f: Finding | undefined,
+)}
 	{const last = $derived(lastDefined(vals))}
 	{const prev = $derived(last ? lastDefined(vals, last.index - 1) : null)}
 	{const hv = $derived(hover.index === null ? undefined : vals[hover.index])}
+	{const lastStats = $derived(last && stats ? stats[last.index] : null)}
+	{const hoverStats = $derived(
+		hover.index === null || !stats ? null : stats[hover.index],
+	)}
 	<div class="num grid pr-1 text-right">
 		<div
 			class="col-start-1 row-start-1"
@@ -110,6 +123,9 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 			{:else}
 				<div class="muted">—</div>
 			{/if}
+			{#if lastStats}
+				<div class="muted text-micro">{formatSampleSummary(lastStats)}</div>
+			{/if}
 		</div>
 		<div
 			class="col-start-1 row-start-1"
@@ -123,6 +139,9 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				<div class="muted text-compact">
 					{hv === null ? "no report" : formatDay(runs[hover.index].startedAt)}
 				</div>
+				{#if hoverStats}
+					<div class="muted text-micro">{formatSampleSummary(hoverStats)}</div>
+				{/if}
 			{/if}
 		</div>
 	</div>
@@ -293,6 +312,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 					</div>
 					{#each METRICS as m (m.key)}
 						{const vals = $derived(seriesValues(repo, m.key))}
+						{const stats = $derived(seriesStats(repo, m.key))}
 						{const f = $derived(findingFor(repo, m.key))}
 						<div
 							class="metric-cell grid items-center gap-2 border-l px-2 py-1"
@@ -308,11 +328,12 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 								softRelativeSpan={isTime(m.key) ? 1 : null}
 								minimumSpan={isTime(m.key) ? 10 : null}
 								markers={f ? [f.at] : []}
+								ranges={isTime(m.key) ? seriesRanges(repo, m.key) : []}
 								height={lastRow ? 74 : 60}
 								axis={lastRow ? "dates" : "none"}
 								ariaLabel={`${m.label} for ${repo.slug} over ${runs.length} runs`}
 							/>
-							{@render deltaCell(m, vals, f)}
+							{@render deltaCell(m, vals, stats, f)}
 						</div>
 					{/each}
 					{const totals = $derived(severityTotals(repo))}
@@ -397,11 +418,12 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 			</div>
 		</StickyHorizontalScroll>
 		<p class="muted mt-2 text-xs">
-			Each cell is scaled to its own range. Coloured ▲/▼ = a detected change (≥{threshold}σ
-			from the baseline, held ≥2 runs, or the latest run alone); the grey line
-			is that baseline and the vertical marker the change point. Plain deltas
-			are vs the previous run and not significant. Severity column: total, then
-			errors · warnings · info — {SEVERITY_NOTE}.
+			Each cell is scaled to its own range. Time cells plot the median of each
+			run's samples with a band from min to max. Coloured ▲/▼ = a detected
+			change (≥{threshold}σ from the baseline, held ≥2 runs, or the latest run
+			alone); the grey line is that baseline and the vertical marker the change
+			point. Plain deltas are vs the previous run and not significant. Severity
+			column: total, then errors · warnings · info — {SEVERITY_NOTE}.
 		</p>
 	{/if}
 </main>
