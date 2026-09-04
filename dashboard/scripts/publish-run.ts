@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import {
 	access,
 	mkdtemp,
@@ -104,19 +105,45 @@ export function parseArguments(arguments_: string[]): PublishOptions {
 	return PublishArgumentsSchema.parse(values);
 }
 
-async function loadTargetArtifacts(
+export async function loadTargetArtifacts(
 	directory: string,
 ): Promise<TargetArtifact[]> {
-	const entries = (await readdir(directory, { withFileTypes: true }))
-		.filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-		.sort((left, right) => left.name.localeCompare(right.name));
+	let entries: Dirent[];
+	try {
+		entries = (await readdir(directory, { withFileTypes: true }))
+			.filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+			.sort((left, right) => left.name.localeCompare(right.name));
+	} catch (error) {
+		console.warn(
+			`Could not read target metadata directory ${directory}.`,
+			error,
+		);
+		return [];
+	}
 	const artifacts = await Promise.all(
 		entries.map(async (entry) => {
 			const path = join(directory, entry.name);
-			return JSON.parse(await readFile(path, "utf8"));
+			try {
+				return TargetArtifactSchema.parse(
+					JSON.parse(await readFile(path, "utf8")),
+				);
+			} catch (error) {
+				console.warn(`Skipping invalid target metadata ${path}.`, error);
+				return undefined;
+			}
 		}),
 	);
-	return parseTargetArtifacts(artifacts);
+	const result = TargetArtifactsSchema.safeParse(
+		artifacts.filter((artifact) => artifact !== undefined),
+	);
+	if (!result.success) {
+		console.warn(
+			"Target metadata contains duplicate identifiers.",
+			result.error,
+		);
+		return [];
+	}
+	return result.data;
 }
 
 export function parseTargetArtifacts(value: unknown): TargetArtifact[] {

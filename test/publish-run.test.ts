@@ -1,7 +1,11 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import {
 	buildRunManifest,
 	incomingManifestKey,
+	loadTargetArtifacts,
 	parseArguments,
 	parseTargetArtifacts,
 	reportObjectKey,
@@ -78,5 +82,29 @@ describe("run publication", () => {
 			parseTargetArtifacts([target, { ...target, id: "astro-copy" }]),
 		).toThrow("Repository slugs must be unique");
 		expect(() => parseTargetArtifacts([{ ...target, id: "bad id" }])).toThrow();
+	});
+
+	test("handles an unreadable target metadata directory", async () => {
+		const directory = await mkdtemp(join(tmpdir(), "publish-run-test-"));
+		try {
+			await expect(
+				loadTargetArtifacts(join(directory, "missing")),
+			).resolves.toEqual([]);
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
+
+	test("skips invalid target metadata artifacts", async () => {
+		const directory = await mkdtemp(join(tmpdir(), "publish-run-test-"));
+		try {
+			await Promise.all([
+				writeFile(join(directory, "valid.json"), JSON.stringify(target)),
+				writeFile(join(directory, "invalid.json"), "not json"),
+			]);
+			await expect(loadTargetArtifacts(directory)).resolves.toEqual([target]);
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
 	});
 });
