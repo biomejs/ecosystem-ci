@@ -1,5 +1,6 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+	"plugins": ["./biome-plugins/useZodNamespaceImport.grit"],
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -25,10 +26,18 @@
 		},
 		"rules": {
 			"preset": "recommended",
+			"style": {
+				"useConsistentArrayType": "error"
+			},
 			"nursery": {
+				"noFloatingPromises": "error",
+				"noMisusedPromises": "error",
 				"noSvelteLegacyConst": "error",
 				"noTailwindArbitraryValue": "error",
+				"noUnsafePlusOperands": "error",
+				"useIncludes": "error",
 				"useSvelteRequireEachKey": "error",
+				"useStringStartsEndsWith": "error",
 				"useTailwindShorthandClasses": "error"
 			}
 		}

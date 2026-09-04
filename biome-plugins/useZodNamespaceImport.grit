@@ -1,0 +1,12 @@
+language js(typescript)
+
+or {
+	`import $imports from "zod"` as $import where {
+		not $import <: `import * as $_ from "zod"`,
+		register_diagnostic(span=$import, message="Use the Zod namespace import: import * as z from 'zod'.")
+	},
+	`import * as $name from "zod"` as $import where {
+		$name <: not `z`,
+		register_diagnostic(span=$import, message="Name the Zod namespace import 'z'.")
+	}
+}

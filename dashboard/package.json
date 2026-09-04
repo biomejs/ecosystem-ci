@@ -7,7 +7,9 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"deploy": "pnpm run build && wrangler deploy",
+		"deploy": "pnpm run deploy:dashboard && pnpm run deploy:ingest",
+		"deploy:dashboard": "pnpm run build && wrangler deploy",
+		"deploy:ingest": "wrangler deploy --config wrangler.ingest.jsonc",
 		"cf-typegen": "wrangler types cloudflare-env.d.ts",
 		"db:migrate:local": "wrangler d1 migrations apply DB --local",
 		"db:migrate:remote": "wrangler d1 migrations apply DB --remote",
@@ -28,5 +30,8 @@
 		"typescript": "^5.9.3",
 		"vite": "^8.2.2",
 		"wrangler": "^4.124.0"
+	},
+	"dependencies": {
+		"zod": "^4.4.3"
 	}
 }
