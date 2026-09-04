@@ -7,9 +7,7 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"deploy": "pnpm run deploy:dashboard && pnpm run deploy:ingest",
-		"deploy:dashboard": "pnpm run build && wrangler deploy",
-		"deploy:ingest": "wrangler deploy --config wrangler.ingest.jsonc",
+		"deploy": "pnpm run build && wrangler deploy",
 		"cf-typegen": "wrangler types cloudflare-env.d.ts",
 		"db:migrate:local": "wrangler d1 migrations apply DB --local",
 		"db:migrate:remote": "wrangler d1 migrations apply DB --remote",
@@ -32,6 +30,7 @@
 		"wrangler": "^4.124.0"
 	},
 	"dependencies": {
+		"@biomejs/ecosystem-ci-ingest": "workspace:*",
 		"zod": "^4.4.3"
 	}
 }

@@ -25,7 +25,7 @@ Run `just ci` to lint, test, type-check, and build the project.
 
 ### Deployment
 
-`just deploy` deploys the dashboard and the `ecosystem-ci-ingest` Worker. The ingestion Worker consumes the `ecosystem-ci-ingest` queue and accepts workflow uploads using the `UPLOAD_TOKEN` Worker secret. The same value must be stored in the GitHub repository as `ECOSYSTEM_CI_UPLOAD_TOKEN`.
+The dashboard and ingestion Worker are separate pnpm workspaces in [`dashboard/`](dashboard/) and [`ingest/`](ingest/). `just deploy` deploys both. The ingestion Worker consumes the `ecosystem-ci-ingest` queue and accepts workflow uploads using the `UPLOAD_TOKEN` Worker secret. The same value must be stored in the GitHub repository as `ECOSYSTEM_CI_UPLOAD_TOKEN`.
 
 R2 must notify the queue for object creation under the `incoming/runs/` prefix with the `/manifest.json` suffix in `biome-ecosystem-ci-reports`. The consumer writes the latest run attempt to D1, copies the manifest into its canonical run folder, and removes the incoming copy.
 

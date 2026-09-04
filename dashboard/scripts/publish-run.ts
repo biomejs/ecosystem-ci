@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import * as z from "zod";
 import {
 	CommitShaSchema,
 	ManifestTargetSchema,
@@ -14,7 +13,8 @@ import {
 	type RunManifest,
 	RunManifestSchema,
 	TimestampSchema,
-} from "../src/lib/schemas.js";
+} from "@biomejs/ecosystem-ci-ingest/schemas";
+import * as z from "zod";
 
 const DEFAULT_UPLOAD_URL = "https://ecosystem-ci-ingest.biomejsdev.workers.dev";
 
