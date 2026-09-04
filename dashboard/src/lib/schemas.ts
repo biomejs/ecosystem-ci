@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 const INCOMING_MANIFEST_PATTERN =
 	/^incoming\/runs\/(\d+)\/attempts\/(\d+)\/manifest\.json$/;

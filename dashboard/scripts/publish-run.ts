@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { z } from "zod";
+import * as z from "zod";
 import {
 	CommitShaSchema,
 	ManifestTargetSchema,

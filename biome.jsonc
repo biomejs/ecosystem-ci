@@ -1,5 +1,6 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+	"plugins": ["./biome-plugins/useZodNamespaceImport.grit"],
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
