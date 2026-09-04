@@ -7,11 +7,11 @@
 		"lint": "biome check",
 		"test": "pnpm --dir dashboard exec svelte-kit sync && vitest run",
 		"dev": "pnpm --dir dashboard run dev",
-		"build": "pnpm --dir dashboard run build",
+		"build": "pnpm --dir dashboard run build && pnpm --dir ingest run build",
 		"check": "pnpm --dir dashboard run check",
 		"reports:import": "pnpm --dir dashboard run reports:import",
 		"reports:diagnostics": "pnpm --dir dashboard run reports:diagnostics",
-		"deploy": "pnpm --dir dashboard run deploy"
+		"deploy": "pnpm --dir dashboard run deploy && pnpm --dir ingest run deploy"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.12",

@@ -6,7 +6,7 @@ import {
 	parseRawReport,
 	parseReportObjectKey,
 	parseRunManifest,
-} from "./lib/ingest.js";
+} from "./ingest.js";
 
 interface IngestEnv extends CloudflareEnv {
 	UPLOAD_TOKEN: string;

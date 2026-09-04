@@ -1,5 +1,6 @@
 packages:
   - dashboard
+  - ingest
 
 allowBuilds:
   esbuild: true

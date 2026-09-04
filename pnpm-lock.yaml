@@ -20,6 +20,9 @@ importers:
 
   dashboard:
     dependencies:
+      '@biomejs/ecosystem-ci-ingest':
+        specifier: workspace:*
+        version: link:../ingest
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -54,6 +57,19 @@ importers:
       vite:
         specifier: ^8.2.2
         version: 8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)
+      wrangler:
+        specifier: ^4.124.0
+        version: 4.127.0(@cloudflare/workers-types@5.20260827.1)
+
+  ingest:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^5.20260819.1
+        version: 5.20260827.1
       wrangler:
         specifier: ^4.124.0
         version: 4.127.0(@cloudflare/workers-types@5.20260827.1)

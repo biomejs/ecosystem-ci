@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import ingestWorker from "../dashboard/src/ingest-worker";
+import ingestWorker from "../ingest/src";
 import {
 	handleR2Event,
 	ingestManifestObject,
@@ -10,7 +10,7 @@ import {
 	parseRunManifest,
 	repositorySlugFromReportKey,
 	summarizeReport,
-} from "../dashboard/src/lib/ingest";
+} from "../ingest/src/ingest";
 
 const manifest = {
 	schemaVersion: 1,
