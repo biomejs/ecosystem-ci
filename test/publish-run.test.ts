@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import {
 	buildRunManifest,
 	incomingManifestKey,
+	parseArguments,
+	parseTargetArtifacts,
 	reportObjectKey,
 	type TargetArtifact,
 } from "../dashboard/scripts/publish-run";
@@ -48,5 +50,33 @@ describe("run publication", () => {
 		expect(incomingManifestKey(123, 2)).toBe(
 			"incoming/runs/123/attempts/2/manifest.json",
 		);
+		expect(() => reportObjectKey(0, 2, "withastro/astro")).toThrow();
+		expect(() => reportObjectKey(123, 2, "astro")).toThrow();
+	});
+
+	test("validates publisher arguments and target metadata", () => {
+		const options = parseArguments([
+			"--reports-dir",
+			"reports",
+			"--metadata-dir",
+			"metadata",
+			"--run-id",
+			"123",
+			"--run-attempt",
+			"2",
+			"--biome-branch",
+			"main",
+			"--biome-commit-sha",
+			"a".repeat(40),
+			"--started-at",
+			"2026-09-03T10:00:00.000Z",
+			"--completed-at",
+			"2026-09-03T10:05:00.000Z",
+		]);
+		expect(options).toMatchObject({ githubRunId: 123, runAttempt: 2 });
+		expect(() =>
+			parseTargetArtifacts([target, { ...target, id: "astro-copy" }]),
+		).toThrow("Repository slugs must be unique");
+		expect(() => parseTargetArtifacts([{ ...target, id: "bad id" }])).toThrow();
 	});
 });

@@ -1,21 +1,30 @@
+import { z } from "zod";
 import {
 	handleR2Event,
 	parseIncomingManifestKey,
+	parseR2EventNotification,
 	parseRawReport,
+	parseReportObjectKey,
 	parseRunManifest,
-	type R2EventNotification,
-	repositorySlugFromReportKey,
 } from "./lib/ingest.js";
 
 interface IngestEnv extends CloudflareEnv {
 	UPLOAD_TOKEN: string;
 }
 
+const IngestEnvironmentSchema = z.object({
+	UPLOAD_TOKEN: z.string().min(1),
+});
+
 async function upload(request: Request, env: IngestEnv): Promise<Response> {
-	if (!env.UPLOAD_TOKEN) {
+	const configuration = IngestEnvironmentSchema.safeParse(env);
+	if (!configuration.success) {
 		return new Response("Upload is not configured", { status: 503 });
 	}
-	if (request.headers.get("Authorization") !== `Bearer ${env.UPLOAD_TOKEN}`) {
+	if (
+		request.headers.get("Authorization") !==
+		`Bearer ${configuration.data.UPLOAD_TOKEN}`
+	) {
 		return new Response("Unauthorized", {
 			status: 401,
 			headers: { "WWW-Authenticate": "Bearer" },
@@ -28,9 +37,7 @@ async function upload(request: Request, env: IngestEnv): Promise<Response> {
 	}
 	const key = pathname.slice("/upload/".length);
 	const manifestLocation = parseIncomingManifestKey(key);
-	const reportMatch = key.match(
-		/^runs\/(\d+)\/attempts\/(\d+)\/reports\/[^/]+\/[^/]+\.json$/,
-	);
+	const reportLocation = parseReportObjectKey(key);
 
 	const bytes = await request.arrayBuffer();
 	let value: unknown;
@@ -59,9 +66,8 @@ async function upload(request: Request, env: IngestEnv): Promise<Response> {
 				},
 			);
 		}
-	} else if (reportMatch) {
-		const prefix = `runs/${reportMatch[1]}/attempts/${reportMatch[2]}/reports/`;
-		if (!repositorySlugFromReportKey(prefix, key) || !parseRawReport(value)) {
+	} else if (reportLocation) {
+		if (!parseRawReport(value)) {
 			return new Response("Invalid report", { status: 400 });
 		}
 	} else {
@@ -94,9 +100,10 @@ export default {
 	async queue(batch, env) {
 		for (const message of batch.messages) {
 			try {
-				const result = await handleR2Event(message.body, env);
+				const event = parseR2EventNotification(message.body);
+				const result = await handleR2Event(event, env);
 				console.info(
-					`Ingestion ${result.status}: ${message.body.object.key} (${result.reportCount} reports)`,
+					`Ingestion ${result.status}: ${event.object.key} (${result.reportCount} reports)`,
 				);
 				message.ack();
 			} catch (error) {
@@ -108,4 +115,4 @@ export default {
 			}
 		}
 	},
-} satisfies ExportedHandler<IngestEnv, R2EventNotification>;
+} satisfies ExportedHandler<IngestEnv, unknown>;

@@ -4,7 +4,9 @@ import {
 	handleR2Event,
 	ingestManifestObject,
 	parseIncomingManifestKey,
+	parseR2EventNotification,
 	parseRawReport,
+	parseReportObjectKey,
 	parseRunManifest,
 	repositorySlugFromReportKey,
 	summarizeReport,
@@ -97,7 +99,13 @@ describe("run manifest ingestion", () => {
 		expect(parseRunManifest(manifest)).toEqual(manifest);
 		expect(() =>
 			parseRunManifest({ ...manifest, targets: { astro: {} } }),
-		).toThrow("not a repository slug");
+		).toThrow();
+		expect(() =>
+			parseRunManifest({
+				...manifest,
+				completedAt: "2026-09-03T09:59:00.000Z",
+			}),
+		).toThrow("Run completed before it started");
 	});
 
 	test("derives run locations and repository slugs from R2 keys", () => {
@@ -116,6 +124,14 @@ describe("run manifest ingestion", () => {
 				"runs/123/attempts/2/reports/withastro/astro.json",
 			),
 		).toBe("withastro/astro");
+		expect(
+			parseReportObjectKey("runs/123/attempts/2/reports/withastro/astro.json"),
+		).toEqual({
+			githubRunId: 123,
+			runAttempt: 2,
+			repositorySlug: "withastro/astro",
+			reportsPrefix: "runs/123/attempts/2/reports/",
+		});
 	});
 
 	test("summarizes valid reports and ignores error placeholders", () => {
@@ -152,6 +168,25 @@ describe("run manifest ingestion", () => {
 			},
 		]);
 		expect(parseRawReport({ error: true })).toBeNull();
+		expect(
+			parseRawReport({
+				...rawReport,
+				summary: { ...rawReport.summary, errors: -1 },
+			}),
+		).toBeNull();
+	});
+
+	test("validates R2 event notification bodies", () => {
+		expect(
+			parseR2EventNotification({
+				account: "account-id",
+				action: "PutObject",
+				bucket: "biome-ecosystem-ci-reports",
+				object: { key: "incoming/runs/123/attempts/2/manifest.json" },
+				eventTime: "2026-09-03T10:05:00.000Z",
+			}),
+		).toMatchObject({ action: "PutObject" });
+		expect(() => parseR2EventNotification({ action: "PutObject" })).toThrow();
 	});
 
 	test("writes D1, promotes the manifest, and removes the incoming copy", async () => {
@@ -233,6 +268,7 @@ describe("run manifest ingestion", () => {
 		await expect(
 			handleR2Event(
 				{
+					account: "account-id",
 					action: "DeleteObject",
 					bucket: "biome-ecosystem-ci-reports",
 					object: { key: "anything" },

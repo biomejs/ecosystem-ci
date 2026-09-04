@@ -19,6 +19,10 @@ importers:
         version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
 
   dashboard:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260819.1
@@ -1528,6 +1532,9 @@ packages:
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
 snapshots:
 
   '@biomejs/biome@2.5.12':
@@ -2639,3 +2646,5 @@ snapshots:
       youch-core: 0.3.3
 
   zimmerframe@1.1.4: {}
+
+  zod@4.4.3: {}

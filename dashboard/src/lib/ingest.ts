@@ -1,76 +1,21 @@
+import { z } from "zod";
+import {
+	IncomingManifestKeySchema,
+	type ManifestTarget,
+	type R2EventNotification,
+	R2EventNotificationSchema,
+	type RawReport,
+	RawReportSchema,
+	ReportObjectKeySchema,
+	RepositorySlugSchema,
+	type RunManifest,
+	RunManifestSchema,
+} from "./schemas.js";
+
 export const INGEST_QUEUE_NAME = "ecosystem-ci-ingest";
 export const REPORTS_BUCKET_NAME = "biome-ecosystem-ci-reports";
 
-const SHA_PATTERN = /^[0-9a-f]{40}$/i;
-const INCOMING_MANIFEST_PATTERN =
-	/^incoming\/runs\/(\d+)\/attempts\/(\d+)\/manifest\.json$/;
-
-const MIGRATION_OUTCOMES = new Set([
-	"not_run",
-	"failed",
-	"succeeded_no_changes",
-	"succeeded_with_changes",
-]);
-const EXECUTION_STATUSES = new Set([
-	"pending",
-	"completed",
-	"timed_out",
-	"cancelled",
-	"error",
-]);
-
-export interface ManifestTarget {
-	repositoryCommitSha: string;
-	jobStartedAt: string;
-	jobCompletedAt: string;
-	migrationOutcome:
-		| "not_run"
-		| "failed"
-		| "succeeded_no_changes"
-		| "succeeded_with_changes";
-	executionStatus:
-		| "pending"
-		| "completed"
-		| "timed_out"
-		| "cancelled"
-		| "error";
-}
-
-export interface RunManifest {
-	schemaVersion: 1;
-	githubRunId: number;
-	runAttempt: number;
-	biomeBranch: string;
-	biomeCommitSha: string;
-	status: "completed";
-	startedAt: string;
-	completedAt: string;
-	targets: Record<string, ManifestTarget>;
-}
-
-export interface R2EventNotification {
-	action: string;
-	bucket: string;
-	object: {
-		key: string;
-		eTag?: string;
-		size?: number;
-	};
-	eventTime: string;
-}
-
-interface RawReport {
-	summary: {
-		duration: number;
-		scannerDuration: number;
-		errors: number;
-		warnings: number;
-	};
-	diagnostics: Array<{
-		category?: unknown;
-		severity?: unknown;
-	}>;
-}
+export type { ManifestTarget, R2EventNotification, RawReport, RunManifest };
 
 interface ReportRow {
 	repositorySlug: string;
@@ -97,139 +42,17 @@ interface IngestResult {
 	reportCount: number;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function requireString(record: Record<string, unknown>, key: string): string {
-	const value = record[key];
-	if (typeof value !== "string" || value.length === 0) {
-		throw new Error(`Manifest field ${key} must be a non-empty string`);
-	}
-	return value;
-}
-
-function requirePositiveInteger(
-	record: Record<string, unknown>,
-	key: string,
-): number {
-	const value = record[key];
-	if (!Number.isSafeInteger(value) || (value as number) <= 0) {
-		throw new Error(`Manifest field ${key} must be a positive integer`);
-	}
-	return value as number;
-}
-
-function requireTimestamp(
-	record: Record<string, unknown>,
-	key: string,
-): string {
-	const value = requireString(record, key);
-	if (!Number.isFinite(Date.parse(value))) {
-		throw new Error(`Manifest field ${key} must be an ISO timestamp`);
-	}
-	return value;
-}
-
-export function isRepositorySlug(value: string): boolean {
-	return /^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+$/.test(value);
-}
-
-function parseManifestTarget(value: unknown, slug: string): ManifestTarget {
-	if (!isRecord(value)) {
-		throw new Error(`Manifest target ${slug} must be an object`);
-	}
-	const repositoryCommitSha = requireString(value, "repositoryCommitSha");
-	if (!SHA_PATTERN.test(repositoryCommitSha)) {
-		throw new Error(`Manifest target ${slug} has an invalid commit SHA`);
-	}
-	const jobStartedAt = requireTimestamp(value, "jobStartedAt");
-	const jobCompletedAt = requireTimestamp(value, "jobCompletedAt");
-	if (Date.parse(jobCompletedAt) < Date.parse(jobStartedAt)) {
-		throw new Error(`Manifest target ${slug} completed before it started`);
-	}
-	const migrationOutcome = requireString(value, "migrationOutcome");
-	if (!MIGRATION_OUTCOMES.has(migrationOutcome)) {
-		throw new Error(`Manifest target ${slug} has an invalid migration outcome`);
-	}
-	const executionStatus = requireString(value, "executionStatus");
-	if (!EXECUTION_STATUSES.has(executionStatus)) {
-		throw new Error(`Manifest target ${slug} has an invalid execution status`);
-	}
-	return {
-		repositoryCommitSha,
-		jobStartedAt,
-		jobCompletedAt,
-		migrationOutcome: migrationOutcome as ManifestTarget["migrationOutcome"],
-		executionStatus: executionStatus as ManifestTarget["executionStatus"],
-	};
-}
-
 export function parseRunManifest(value: unknown): RunManifest {
-	if (!isRecord(value)) throw new Error("Run manifest must be an object");
-	if (value.schemaVersion !== 1) {
-		throw new Error("Run manifest schemaVersion must be 1");
-	}
-	const githubRunId = requirePositiveInteger(value, "githubRunId");
-	const runAttempt = requirePositiveInteger(value, "runAttempt");
-	const biomeBranch = requireString(value, "biomeBranch");
-	const biomeCommitSha = requireString(value, "biomeCommitSha");
-	if (!SHA_PATTERN.test(biomeCommitSha)) {
-		throw new Error("Manifest field biomeCommitSha must be a commit SHA");
-	}
-	if (value.status !== "completed") {
-		throw new Error("Manifest field status must be completed");
-	}
-	const startedAt = requireTimestamp(value, "startedAt");
-	const completedAt = requireTimestamp(value, "completedAt");
-	if (Date.parse(completedAt) < Date.parse(startedAt)) {
-		throw new Error("Run completed before it started");
-	}
-	if (!isRecord(value.targets)) {
-		throw new Error("Manifest field targets must be an object");
-	}
-	const targets: Record<string, ManifestTarget> = {};
-	for (const [slug, target] of Object.entries(value.targets)) {
-		if (!isRepositorySlug(slug)) {
-			throw new Error(`Manifest target key ${slug} is not a repository slug`);
-		}
-		targets[slug] = parseManifestTarget(target, slug);
-	}
-	return {
-		schemaVersion: 1,
-		githubRunId,
-		runAttempt,
-		biomeBranch,
-		biomeCommitSha,
-		status: "completed",
-		startedAt,
-		completedAt,
-		targets,
-	};
-}
-
-function nonNegativeInteger(value: unknown): value is number {
-	return Number.isSafeInteger(value) && (value as number) >= 0;
+	return RunManifestSchema.parse(value);
 }
 
 export function parseRawReport(value: unknown): RawReport | null {
-	if (!isRecord(value) || value.error === true || !isRecord(value.summary)) {
-		return null;
-	}
-	const { duration, scannerDuration, errors, warnings } = value.summary;
-	if (
-		!nonNegativeInteger(duration) ||
-		!nonNegativeInteger(scannerDuration) ||
-		!nonNegativeInteger(errors) ||
-		!nonNegativeInteger(warnings) ||
-		!Array.isArray(value.diagnostics)
-	) {
-		return null;
-	}
-	return {
-		summary: { duration, scannerDuration, errors, warnings },
-		diagnostics: value.diagnostics.filter(isRecord),
-	};
+	const result = RawReportSchema.safeParse(value);
+	return result.success ? result.data : null;
+}
+
+export function parseR2EventNotification(value: unknown): R2EventNotification {
+	return R2EventNotificationSchema.parse(value);
 }
 
 export function parseIncomingManifestKey(key: string): {
@@ -238,29 +61,32 @@ export function parseIncomingManifestKey(key: string): {
 	canonicalKey: string;
 	reportsPrefix: string;
 } | null {
-	const match = key.match(INCOMING_MANIFEST_PATTERN);
-	if (!match) return null;
-	const githubRunId = Number(match[1]);
-	const runAttempt = Number(match[2]);
-	if (!Number.isSafeInteger(githubRunId) || !Number.isSafeInteger(runAttempt)) {
-		return null;
-	}
-	const attemptPrefix = `runs/${githubRunId}/attempts/${runAttempt}/`;
-	return {
-		githubRunId,
-		runAttempt,
-		canonicalKey: `${attemptPrefix}manifest.json`,
-		reportsPrefix: `${attemptPrefix}reports/`,
-	};
+	const result = IncomingManifestKeySchema.safeParse(key);
+	return result.success ? result.data : null;
+}
+
+export function parseReportObjectKey(key: string): {
+	githubRunId: number;
+	runAttempt: number;
+	repositorySlug: string;
+	reportsPrefix: string;
+} | null {
+	const result = ReportObjectKeySchema.safeParse(key);
+	return result.success ? result.data : null;
 }
 
 export function repositorySlugFromReportKey(
 	reportsPrefix: string,
 	key: string,
 ): string | null {
-	if (!key.startsWith(reportsPrefix) || !key.endsWith(".json")) return null;
-	const slug = key.slice(reportsPrefix.length, -".json".length);
-	return isRepositorySlug(slug) ? slug : null;
+	const schema = z
+		.string()
+		.startsWith(reportsPrefix)
+		.endsWith(".json")
+		.transform((value) => value.slice(reportsPrefix.length, -".json".length))
+		.pipe(RepositorySlugSchema);
+	const result = schema.safeParse(key);
+	return result.success ? result.data : null;
 }
 
 function diagnosticKind(category: string): "rule" | "parse" | "panic" {
@@ -277,12 +103,7 @@ export function summarizeReport(
 ): { report: ReportRow; diagnostics: DiagnosticCountRow[] } {
 	const counts = new Map<string, DiagnosticCountRow>();
 	for (const diagnostic of report.diagnostics) {
-		const category =
-			typeof diagnostic.category === "string"
-				? diagnostic.category
-				: "uncategorized";
-		const severity =
-			typeof diagnostic.severity === "string" ? diagnostic.severity : "unknown";
+		const { category, severity } = diagnostic;
 		const kind = diagnosticKind(category);
 		const key = JSON.stringify([kind, severity, category]);
 		const existing = counts.get(key);
@@ -513,7 +334,9 @@ export async function handleR2Event(
 ): Promise<IngestResult> {
 	if (
 		event.bucket !== REPORTS_BUCKET_NAME ||
-		(event.action !== "PutObject" && event.action !== "CopyObject")
+		(event.action !== "PutObject" &&
+			event.action !== "CopyObject" &&
+			event.action !== "CompleteMultipartUpload")
 	) {
 		return { status: "ignored", reportCount: 0 };
 	}

@@ -10,49 +10,81 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { z } from "zod";
 import {
-	isRepositorySlug,
-	parseRawReport,
-	parseRunManifest,
+	CommitShaSchema,
+	ManifestTargetSchema,
+	PositiveIntegerSchema,
+	RawReportSchema,
+	RepositorySlugSchema,
 	type RunManifest,
-} from "../src/lib/ingest.js";
+	RunManifestSchema,
+	TimestampSchema,
+} from "../src/lib/schemas.js";
 
-const TARGET_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 const DEFAULT_UPLOAD_URL = "https://ecosystem-ci-ingest.biomejsdev.workers.dev";
 
-export interface TargetArtifact {
-	id: string;
-	repositorySlug: string;
-	repositoryCommitSha: string;
-	jobStartedAt: string;
-	jobCompletedAt: string;
-	migrationOutcome: string;
-	executionStatus: string;
-}
+const TargetArtifactSchema = ManifestTargetSchema.safeExtend({
+	id: z.string().regex(/^[A-Za-z0-9._-]+$/),
+	repositorySlug: RepositorySlugSchema,
+});
+const TargetArtifactsSchema = z
+	.array(TargetArtifactSchema)
+	.refine(
+		(artifacts) =>
+			new Set(artifacts.map((artifact) => artifact.id)).size ===
+			artifacts.length,
+		{ error: "Target ids must be unique" },
+	)
+	.refine(
+		(artifacts) =>
+			new Set(artifacts.map((artifact) => artifact.repositorySlug)).size ===
+			artifacts.length,
+		{ error: "Repository slugs must be unique" },
+	);
+const PublishArgumentsSchema = z
+	.object({
+		"reports-dir": z.string().min(1),
+		"metadata-dir": z.string().min(1),
+		"run-id": z.coerce.number().pipe(PositiveIntegerSchema),
+		"run-attempt": z.coerce.number().pipe(PositiveIntegerSchema),
+		"biome-branch": z.string().min(1),
+		"biome-commit-sha": CommitShaSchema,
+		"started-at": TimestampSchema,
+		"completed-at": TimestampSchema,
+	})
+	.refine(
+		(options) =>
+			Date.parse(options["completed-at"]) >= Date.parse(options["started-at"]),
+		{
+			error: "Run completed before it started",
+			path: ["completed-at"],
+		},
+	)
+	.transform((options) => ({
+		reportsDirectory: resolve(options["reports-dir"]),
+		metadataDirectory: resolve(options["metadata-dir"]),
+		githubRunId: options["run-id"],
+		runAttempt: options["run-attempt"],
+		biomeBranch: options["biome-branch"],
+		biomeCommitSha: options["biome-commit-sha"],
+		startedAt: options["started-at"],
+		completedAt: options["completed-at"],
+	}));
+const RunAttemptKeySchema = z.object({
+	githubRunId: PositiveIntegerSchema,
+	runAttempt: PositiveIntegerSchema,
+});
+const ReportObjectKeySchema = RunAttemptKeySchema.extend({
+	repositorySlug: RepositorySlugSchema,
+});
+const UploadConfigurationSchema = z.object({
+	ECOSYSTEM_CI_UPLOAD_TOKEN: z.string().min(1),
+	ECOSYSTEM_CI_UPLOAD_URL: z.string().url().default(DEFAULT_UPLOAD_URL),
+});
 
-interface PublishOptions {
-	reportsDirectory: string;
-	metadataDirectory: string;
-	githubRunId: number;
-	runAttempt: number;
-	biomeBranch: string;
-	biomeCommitSha: string;
-	startedAt: string;
-	completedAt: string;
-}
-
-function requiredString(value: string | undefined, option: string): string {
-	if (!value) throw new Error(`Missing required option --${option}`);
-	return value;
-}
-
-function positiveInteger(value: string | undefined, option: string): number {
-	const parsed = Number(value);
-	if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-		throw new Error(`Option --${option} must be a positive integer`);
-	}
-	return parsed;
-}
+export type TargetArtifact = z.infer<typeof TargetArtifactSchema>;
+type PublishOptions = z.infer<typeof PublishArgumentsSchema>;
 
 export function parseArguments(arguments_: string[]): PublishOptions {
 	const { values } = parseArgs({
@@ -69,53 +101,7 @@ export function parseArguments(arguments_: string[]): PublishOptions {
 		},
 		strict: true,
 	});
-	return {
-		reportsDirectory: resolve(
-			requiredString(values["reports-dir"], "reports-dir"),
-		),
-		metadataDirectory: resolve(
-			requiredString(values["metadata-dir"], "metadata-dir"),
-		),
-		githubRunId: positiveInteger(values["run-id"], "run-id"),
-		runAttempt: positiveInteger(values["run-attempt"], "run-attempt"),
-		biomeBranch: requiredString(values["biome-branch"], "biome-branch"),
-		biomeCommitSha: requiredString(
-			values["biome-commit-sha"],
-			"biome-commit-sha",
-		),
-		startedAt: requiredString(values["started-at"], "started-at"),
-		completedAt: requiredString(values["completed-at"], "completed-at"),
-	};
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function parseTargetArtifact(value: unknown, filename: string): TargetArtifact {
-	if (!isRecord(value)) throw new Error(`${filename} must contain an object`);
-	const fields = [
-		"id",
-		"repositorySlug",
-		"repositoryCommitSha",
-		"jobStartedAt",
-		"jobCompletedAt",
-		"migrationOutcome",
-		"executionStatus",
-	] as const;
-	for (const field of fields) {
-		if (typeof value[field] !== "string" || value[field].length === 0) {
-			throw new Error(`${filename} field ${field} must be a non-empty string`);
-		}
-	}
-	const artifact = value as unknown as TargetArtifact;
-	if (!TARGET_ID_PATTERN.test(artifact.id)) {
-		throw new Error(`${filename} has an invalid target id`);
-	}
-	if (!isRepositorySlug(artifact.repositorySlug)) {
-		throw new Error(`${filename} has an invalid repository slug`);
-	}
-	return artifact;
+	return PublishArgumentsSchema.parse(values);
 }
 
 async function loadTargetArtifacts(
@@ -127,33 +113,23 @@ async function loadTargetArtifacts(
 	const artifacts = await Promise.all(
 		entries.map(async (entry) => {
 			const path = join(directory, entry.name);
-			return parseTargetArtifact(
-				JSON.parse(await readFile(path, "utf8")),
-				entry.name,
-			);
+			return JSON.parse(await readFile(path, "utf8"));
 		}),
 	);
-	const ids = new Set<string>();
-	const slugs = new Set<string>();
-	for (const artifact of artifacts) {
-		if (ids.has(artifact.id)) {
-			throw new Error(`Duplicate target id: ${artifact.id}`);
-		}
-		if (slugs.has(artifact.repositorySlug)) {
-			throw new Error(`Duplicate repository slug: ${artifact.repositorySlug}`);
-		}
-		ids.add(artifact.id);
-		slugs.add(artifact.repositorySlug);
-	}
-	return artifacts;
+	return parseTargetArtifacts(artifacts);
+}
+
+export function parseTargetArtifacts(value: unknown): TargetArtifact[] {
+	return TargetArtifactsSchema.parse(value);
 }
 
 export function buildRunManifest(
 	options: Omit<PublishOptions, "reportsDirectory" | "metadataDirectory">,
 	targetArtifacts: TargetArtifact[],
 ): RunManifest {
+	const parsedTargets = parseTargetArtifacts(targetArtifacts);
 	const targets = Object.fromEntries(
-		targetArtifacts.map((target) => [
+		parsedTargets.map((target) => [
 			target.repositorySlug,
 			{
 				repositoryCommitSha: target.repositoryCommitSha,
@@ -164,7 +140,7 @@ export function buildRunManifest(
 			},
 		]),
 	);
-	return parseRunManifest({
+	return RunManifestSchema.parse({
 		schemaVersion: 1,
 		githubRunId: options.githubRunId,
 		runAttempt: options.runAttempt,
@@ -182,27 +158,29 @@ export function reportObjectKey(
 	runAttempt: number,
 	repositorySlug: string,
 ): string {
-	if (!isRepositorySlug(repositorySlug)) {
-		throw new Error(`Invalid repository slug: ${repositorySlug}`);
-	}
-	return `runs/${githubRunId}/attempts/${runAttempt}/reports/${repositorySlug}.json`;
+	const parsed = ReportObjectKeySchema.parse({
+		githubRunId,
+		runAttempt,
+		repositorySlug,
+	});
+	return `runs/${parsed.githubRunId}/attempts/${parsed.runAttempt}/reports/${parsed.repositorySlug}.json`;
 }
 
 export function incomingManifestKey(
 	githubRunId: number,
 	runAttempt: number,
 ): string {
-	return `incoming/runs/${githubRunId}/attempts/${runAttempt}/manifest.json`;
+	const parsed = RunAttemptKeySchema.parse({ githubRunId, runAttempt });
+	return `incoming/runs/${parsed.githubRunId}/attempts/${parsed.runAttempt}/manifest.json`;
 }
 
 async function uploadJson(path: string, key: string): Promise<void> {
-	const token = process.env.ECOSYSTEM_CI_UPLOAD_TOKEN;
-	if (!token) throw new Error("ECOSYSTEM_CI_UPLOAD_TOKEN is not set");
-	const baseUrl = process.env.ECOSYSTEM_CI_UPLOAD_URL ?? DEFAULT_UPLOAD_URL;
-	const response = await fetch(`${baseUrl.replace(/\/$/, "")}/upload/${key}`, {
+	const configuration = UploadConfigurationSchema.parse(process.env);
+	const baseUrl = configuration.ECOSYSTEM_CI_UPLOAD_URL.replace(/\/$/, "");
+	const response = await fetch(`${baseUrl}/upload/${key}`, {
 		method: "PUT",
 		headers: {
-			Authorization: `Bearer ${token}`,
+			Authorization: `Bearer ${configuration.ECOSYSTEM_CI_UPLOAD_TOKEN}`,
 			"Content-Type": "application/json",
 		},
 		body: await readFile(path),
@@ -251,7 +229,7 @@ export async function publishRun(options: PublishOptions): Promise<number> {
 		} catch {
 			continue;
 		}
-		if (!parseRawReport(value)) continue;
+		if (!RawReportSchema.safeParse(value).success) continue;
 		reports.push({ target, path });
 	}
 	if (reports.length === 0) {
