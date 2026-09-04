@@ -1,12 +1,5 @@
 import type { Dirent } from "node:fs";
-import {
-	access,
-	mkdtemp,
-	readdir,
-	readFile,
-	rm,
-	writeFile,
-} from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -245,15 +238,11 @@ export async function publishRun(options: PublishOptions): Promise<number> {
 			options.reportsDirectory,
 			`biome-report-${target.id}.json`,
 		);
-		try {
-			await access(path);
-		} catch {
-			continue;
-		}
 		let value: unknown;
 		try {
 			value = JSON.parse(await readFile(path, "utf8"));
-		} catch {
+		} catch (error) {
+			console.warn(`Skipping unreadable or malformed report ${path}.`, error);
 			continue;
 		}
 		if (!RawReportSchema.safeParse(value).success) continue;

@@ -25,6 +25,9 @@
 		},
 		"rules": {
 			"preset": "recommended",
+			"style": {
+				"useConsistentArrayType": "error"
+			},
 			"nursery": {
 				"noFloatingPromises": "error",
 				"noMisusedPromises": "error",
