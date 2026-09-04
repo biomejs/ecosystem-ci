@@ -80,9 +80,9 @@ const UploadConfigurationSchema = z.object({
 export type TargetArtifact = z.infer<typeof TargetArtifactSchema>;
 type PublishOptions = z.infer<typeof PublishArgumentsSchema>;
 
-export function parseArguments(arguments_: string[]): PublishOptions {
+export function parseArguments(args: string[]): PublishOptions {
 	const { values } = parseArgs({
-		args: arguments_,
+		args,
 		options: {
 			"reports-dir": { type: "string" },
 			"metadata-dir": { type: "string" },
