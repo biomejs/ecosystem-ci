@@ -185,7 +185,7 @@ function onkeydown(e: KeyboardEvent) {
 					x={x(i)}
 					y={height - 5}
 					text-anchor={i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle"}
-					font-size="10.5"
+					font-size="var(--text-chart)"
 					fill="var(--color-muted)"
 				>
 					{formatDay(runs[i].startedAt)}

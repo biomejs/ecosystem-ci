@@ -1,4 +1,5 @@
 <script lang="ts">
+import { METRIC_BY_KEY } from "$lib/trends/data";
 import { formatCount } from "$lib/trends/format";
 import {
 	deltaColor,
@@ -91,8 +92,8 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 			aria-hidden="true"
 		>
 			<span>Repository</span>
-			<span>Check time</span>
-			<span>Scanner time</span>
+			<span>{METRIC_BY_KEY.checkMs.label}</span>
+			<span>{METRIC_BY_KEY.scannerMs.label}</span>
 			<span>Diagnostics</span>
 			<span>Panics</span>
 		</div>
@@ -122,17 +123,17 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 					</div>
 				</div>
 				<TimingCell
-					label="Check time"
+					label={METRIC_BY_KEY.checkMs.label}
 					base={row.base.check}
 					head={row.head.check}
-					hue="var(--color-blue)"
+					hue={METRIC_BY_KEY.checkMs.hue}
 					view={timingView}
 				/>
 				<TimingCell
-					label="Scanner time"
+					label={METRIC_BY_KEY.scannerMs.label}
 					base={row.base.scanner}
 					head={row.head.scanner}
-					hue="var(--color-violet)"
+					hue={METRIC_BY_KEY.scannerMs.hue}
 					view={timingView}
 				/>
 				{@render countCell(

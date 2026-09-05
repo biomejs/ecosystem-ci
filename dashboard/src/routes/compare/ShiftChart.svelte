@@ -36,9 +36,7 @@ const tickAnchor = $derived(
 );
 </script>
 
-<div
-	class="flex items-center gap-1.5 whitespace-nowrap text-compact text-muted"
->
+<div class="flex items-center gap-1.5 whitespace-nowrap text-sm text-muted">
 	<span>{formatMs(lo)}</span>
 	<svg
 		class="h-8 min-w-0 flex-1 overflow-visible"
@@ -81,7 +79,7 @@ const tickAnchor = $derived(
 		<text
 			x={`${x(base.median)}%`}
 			y="31"
-			font-size="8"
+			font-size="var(--text-chart-detail)"
 			text-anchor={tickAnchor}
 			fill="var(--color-muted)"
 		>

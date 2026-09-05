@@ -268,7 +268,7 @@ function onkeydown(event: KeyboardEvent) {
 <section class="border border-hair bg-surface min-w-0 p-3">
 	<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
 		<h2 class="font-semibold">{title}</h2>
-		<div class="flex items-center gap-3 text-compact">
+		<div class="flex items-center gap-3 text-sm">
 			<label class="inline-flex items-center gap-1.5">
 				<input
 					type="checkbox"
@@ -283,7 +283,7 @@ function onkeydown(event: KeyboardEvent) {
 			</label>
 		</div>
 	</div>
-	<p class="text-muted mb-1 text-compact">
+	<p class="text-muted mb-1 text-sm">
 		{formatDay(runs[focusIndex].startedAt)}
 		· {focusRange} · medians; bands and ticks span each run's samples
 	</p>
@@ -312,7 +312,7 @@ function onkeydown(event: KeyboardEvent) {
 					x={margin.left - 7}
 					y={y(tick) + 3.5}
 					text-anchor="end"
-					font-size="10.5"
+					font-size="var(--text-chart)"
 					fill="var(--color-muted)"
 				>
 					{displayFormat(tick)}
@@ -346,7 +346,7 @@ function onkeydown(event: KeyboardEvent) {
 					x={x(index)}
 					y={height - 5}
 					text-anchor={index === 0 ? "start" : index === runs.length - 1 ? "end" : "middle"}
-					font-size="10.5"
+					font-size="var(--text-chart)"
 					fill="var(--color-muted)"
 				>
 					{formatDay(runs[index].startedAt)}

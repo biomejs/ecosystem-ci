@@ -34,7 +34,7 @@ const runs = $derived([
 </script>
 
 <div
-	class="text-compact text-muted *:flex *:items-center *:gap-1.5 *:whitespace-nowrap"
+	class="text-sm text-muted *:flex *:items-center *:gap-1.5 *:whitespace-nowrap"
 >
 	{#each runs as run (run.name)}
 		<div>
