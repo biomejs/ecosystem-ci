@@ -265,7 +265,7 @@ function onkeydown(event: KeyboardEvent) {
 }
 </script>
 
-<section class="panel min-w-0 p-3">
+<section class="border border-hair bg-surface min-w-0 p-3">
 	<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
 		<h2 class="font-semibold">{title}</h2>
 		<div class="flex items-center gap-3 text-compact">
@@ -283,7 +283,7 @@ function onkeydown(event: KeyboardEvent) {
 			</label>
 		</div>
 	</div>
-	<p class="muted mb-1 text-compact">
+	<p class="text-muted mb-1 text-compact">
 		{formatDay(runs[focusIndex].startedAt)}
 		· {focusRange} · medians; bands and ticks span each run's samples
 	</p>
@@ -306,14 +306,14 @@ function onkeydown(event: KeyboardEvent) {
 					x2={margin.left + plotWidth}
 					y1={y(tick)}
 					y2={y(tick)}
-					stroke="var(--hair)"
+					stroke="var(--color-hair)"
 				/>
 				<text
 					x={margin.left - 7}
 					y={y(tick) + 3.5}
 					text-anchor="end"
 					font-size="10.5"
-					fill="var(--muted)"
+					fill="var(--color-muted)"
 				>
 					{displayFormat(tick)}
 				</text>
@@ -347,7 +347,7 @@ function onkeydown(event: KeyboardEvent) {
 					y={height - 5}
 					text-anchor={index === 0 ? "start" : index === runs.length - 1 ? "end" : "middle"}
 					font-size="10.5"
-					fill="var(--muted)"
+					fill="var(--color-muted)"
 				>
 					{formatDay(runs[index].startedAt)}
 				</text>
@@ -359,7 +359,7 @@ function onkeydown(event: KeyboardEvent) {
 					x2={x(focusIndex)}
 					y1={margin.top}
 					y2={margin.top + plotHeight}
-					stroke="var(--ink-2)"
+					stroke="var(--color-ink-2)"
 				/>
 				{#each focusValues as point (point.slug)}
 					{#if point.range !== null && point.range[0] !== point.range[1]}

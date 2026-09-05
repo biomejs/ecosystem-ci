@@ -159,7 +159,7 @@ function onkeydown(e: KeyboardEvent) {
 				x2={m.left + pw}
 				y1={y(t)}
 				y2={y(t)}
-				stroke="var(--hair)"
+				stroke="var(--color-hair)"
 			/>
 		{/each}
 		{#if baseline !== null}
@@ -168,7 +168,7 @@ function onkeydown(e: KeyboardEvent) {
 				x2={m.left + pw}
 				y1={y(baseline)}
 				y2={y(baseline)}
-				stroke="var(--muted)"
+				stroke="var(--color-muted)"
 			/>
 		{/if}
 		{#each markers as mi (mi)}
@@ -189,7 +189,7 @@ function onkeydown(e: KeyboardEvent) {
 					y={height - 5}
 					text-anchor={i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle"}
 					font-size="10.5"
-					fill="var(--muted)"
+					fill="var(--color-muted)"
 				>
 					{formatDay(runs[i].startedAt)}
 				</text>
@@ -212,7 +212,7 @@ function onkeydown(e: KeyboardEvent) {
 				cx={x(values.length - 1)}
 				cy={y(last)}
 				r="5.5"
-				fill="var(--surface)"
+				fill="var(--color-surface)"
 			/>
 			<circle cx={x(values.length - 1)} cy={y(last)} r="3.5" fill={hue} />
 		{/if}
@@ -223,10 +223,15 @@ function onkeydown(e: KeyboardEvent) {
 				x2={x(hi)}
 				y1={m.top}
 				y2={m.top + ph}
-				stroke="var(--base)"
+				stroke="var(--color-base)"
 			/>
 			{#if hoverValue !== null}
-				<circle cx={x(hi)} cy={y(hoverValue)} r="5" fill="var(--surface)" />
+				<circle
+					cx={x(hi)}
+					cy={y(hoverValue)}
+					r="5"
+					fill="var(--color-surface)"
+				/>
 				<circle cx={x(hi)} cy={y(hoverValue)} r="3" fill={hue} />
 			{/if}
 		{/if}

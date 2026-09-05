@@ -13,16 +13,38 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 	<title>Compare runs · Ecosystem CI</title>
 </svelte:head>
 
-<main class="comparison-shell">
-	<header class="page-heading">
-		<a href="/">← Ecosystem CI trends</a>
+{#snippet runSummary(run: NonNullable<PageData["base"]>)}
+	<small class="mt-2 flex min-w-0 gap-2.5 text-muted text-xs">
+		<span class="min-w-0 flex-auto truncate font-mono text-ink-2"
+			>{run.biomeBranch}</span
+		>
+		<a
+			class="shrink-0"
+			href={`https://github.com/biomejs/biome/commit/${run.biomeCommitSha}`}
+			>{shortSha(run.biomeCommitSha)}</a
+		>
+		<span class="shrink-0">{run.results} reports</span>
+	</small>
+{/snippet}
+
+<main
+	class="mx-auto w-full max-w-compare overflow-x-clip px-4 pt-5 pb-8 sm:px-6 sm:pt-7"
+>
+	<header>
+		<a class="text-muted text-xs" href="/">← Ecosystem CI trends</a>
 	</header>
 
 	{#if data.base && data.head}
-		<form class="run-picker" method="GET">
-			<label>
-				<span>Baseline run</span>
-				<select name="base">
+		<form
+			class="mt-3 grid grid-cols-1 items-center gap-4 border border-hair bg-surface p-4 md:grid-cols-picker"
+			method="GET"
+		>
+			<label class="min-w-0">
+				<span class="eyebrow mb-1.5 block">Baseline run</span>
+				<select
+					class="block h-10 w-full min-w-0 truncate border border-base px-3"
+					name="base"
+				>
 					{#each data.runs as run (run.githubRunId)}
 						<option
 							value={run.githubRunId}
@@ -32,19 +54,17 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 						</option>
 					{/each}
 				</select>
-				<small>
-					<span class="branch-name">{data.base.biomeBranch}</span>
-					<a
-						href={`https://github.com/biomejs/biome/commit/${data.base.biomeCommitSha}`}
-						>{shortSha(data.base.biomeCommitSha)}</a
-					>
-					<span>{data.base.results} reports</span>
-				</small>
+				{@render runSummary(data.base)}
 			</label>
-			<span class="direction" aria-hidden="true">→</span>
-			<label>
-				<span>Compared run</span>
-				<select name="head">
+			<span class="hidden text-muted text-xl md:block" aria-hidden="true"
+				>→</span
+			>
+			<label class="min-w-0">
+				<span class="eyebrow mb-1.5 block">Compared run</span>
+				<select
+					class="block h-10 w-full min-w-0 truncate border border-base px-3"
+					name="head"
+				>
 					{#each data.runs as run (run.githubRunId)}
 						<option
 							value={run.githubRunId}
@@ -54,144 +74,26 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 						</option>
 					{/each}
 				</select>
-				<small>
-					<span class="branch-name">{data.head.biomeBranch}</span>
-					<a
-						href={`https://github.com/biomejs/biome/commit/${data.head.biomeCommitSha}`}
-						>{shortSha(data.head.biomeCommitSha)}</a
-					>
-					<span>{data.head.results} reports</span>
-				</small>
+				{@render runSummary(data.head)}
 			</label>
-			<button type="submit">Compare</button>
+			<button
+				class="h-10 w-full border border-base bg-page px-4 font-semibold hover:bg-hair md:w-auto"
+				type="submit"
+			>
+				Compare
+			</button>
 		</form>
 	{/if}
 
 	{#if !data.base || !data.head}
-		<p class="empty-state">
+		<p class="mt-6 border border-hair bg-surface p-5">
 			At least two stored runs are needed for a comparison.
 		</p>
 	{:else if data.comparisons.length === 0}
-		<p class="empty-state">No shared repository results.</p>
+		<p class="mt-6 border border-hair bg-surface p-5">
+			No shared repository results.
+		</p>
 	{:else}
 		<ComparisonTable comparisons={data.comparisons} />
 	{/if}
 </main>
-
-<style>
-.comparison-shell {
-	width: min(100%, 76rem);
-	margin: 0 auto;
-	padding: 1.75rem 1.5rem 2rem;
-	overflow-x: clip;
-}
-
-.page-heading > a {
-	color: var(--muted);
-	font-size: 0.8rem;
-}
-
-.run-picker {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
-	gap: 1rem;
-	align-items: center;
-	margin-top: 0.75rem;
-	padding: 1rem;
-	border: 1px solid var(--hair);
-	background: var(--surface);
-}
-
-.run-picker label {
-	min-width: 0;
-}
-
-.run-picker label > span:first-child {
-	display: block;
-	margin-bottom: 0.4rem;
-	color: var(--muted);
-	font-size: 0.72rem;
-	font-weight: 650;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-}
-
-.run-picker select {
-	display: block;
-	width: 100%;
-	min-width: 0;
-	height: 2.6rem;
-	padding: 0 0.75rem;
-	overflow: hidden;
-	border: 1px solid var(--base);
-	text-overflow: ellipsis;
-}
-
-.run-picker small {
-	display: flex;
-	min-width: 0;
-	gap: 0.65rem;
-	margin-top: 0.45rem;
-	color: var(--muted);
-	font-size: 0.74rem;
-}
-
-.run-picker small > * {
-	flex: 0 0 auto;
-}
-
-.run-picker .branch-name {
-	min-width: 0;
-	flex: 1 1 auto;
-	overflow: hidden;
-	color: var(--ink-2);
-	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.direction {
-	color: var(--muted);
-	font-size: 1.2rem;
-}
-
-.run-picker button {
-	height: 2.6rem;
-	padding: 0 1rem;
-	border: 1px solid var(--base);
-	background: var(--page);
-	font-weight: 650;
-}
-
-.run-picker button:hover {
-	background: var(--hair);
-}
-
-.empty-state {
-	margin-top: 1.5rem;
-	padding: 1.25rem;
-	border: 1px solid var(--hair);
-	background: var(--surface);
-}
-
-@media (max-width: 800px) {
-	.run-picker {
-		grid-template-columns: 1fr;
-		gap: 1rem;
-	}
-
-	.direction {
-		display: none;
-	}
-
-	.run-picker button {
-		width: 100%;
-	}
-}
-
-@media (max-width: 520px) {
-	.comparison-shell {
-		padding: 1.25rem 1rem 2rem;
-	}
-}
-</style>

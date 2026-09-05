@@ -22,13 +22,13 @@ export function relativeDelta(base: number, head: number): number {
 }
 
 export function deltaColor(value: number | null, fullSignalAt = 20): string {
-	if (value === null || value === 0) return "var(--muted)";
+	if (value === null || value === 0) return "var(--color-muted)";
 	const intensity = Math.min(
 		100,
 		Math.round(15 + (Math.abs(value) / fullSignalAt) * 85),
 	);
-	const direction = value > 0 ? "var(--worse)" : "var(--better)";
-	return `color-mix(in oklab, ${direction} ${intensity}%, var(--muted))`;
+	const direction = value > 0 ? "var(--color-worse)" : "var(--color-better)";
+	return `color-mix(in oklab, ${direction} ${intensity}%, var(--color-muted))`;
 }
 
 export function diagnosticTotal(value: RunObservation): number {

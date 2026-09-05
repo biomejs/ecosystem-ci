@@ -36,29 +36,35 @@ const quietCount = $derived(comparisons.length - reviewCount - improvedCount);
 
 const signedCount = (value: number): string =>
 	value > 0 ? `+${formatCount(value)}` : formatCount(value);
-const color = (kind: ReturnType<typeof reviewKind>): string =>
-	kind === "worse"
-		? "var(--worse)"
-		: kind === "better"
-			? "var(--better)"
-			: "var(--muted)";
+const textTone: Record<ReturnType<typeof reviewKind>, string> = {
+	worse: "text-worse",
+	better: "text-better",
+	quiet: "text-muted",
+};
+const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
+	worse: "bg-worse",
+	better: "bg-better",
+	quiet: "bg-muted",
+};
 </script>
 
 {#snippet timingCell(label: string, base: TimingStats | null, head: TimingStats | null)}
 	{const delta = $derived(percentDelta(medianMs(base), medianMs(head)))}
-	<div class="metric-cell">
-		<span class="mobile-label">{label}</span>
-		<strong
+	<div class="min-w-0 tabular-nums">
+		<span class="eyebrow mb-1 block md:hidden">{label}</span>
+		<strong class="block whitespace-nowrap font-semibold text-sm"
 			>{base === null ? "—" : formatMs(base.median)}
 			→
 			{head === null ? "—" : formatMs(head.median)}</strong
 		>
-		<span class="delta" style:color={deltaColor(delta)}>
+		<span class="mt-0.5 block text-xs" style:color={deltaColor(delta)}>
 			{delta === null ? "no delta" : formatPct(delta)}
-			<span class="stat-note">median</span>
+			<span class="text-muted">median</span>
 		</span>
 		{#if base !== null || head !== null}
-			<dl class="stat-grid">
+			<dl
+				class="mt-1.5 grid grid-cols-stats gap-x-2.5 gap-y-0 text-compact text-muted *:whitespace-nowrap"
+			>
 				<dt>min</dt>
 				<dd>{base === null ? "—" : formatMs(base.min)}</dd>
 				<dd>{head === null ? "—" : formatMs(head.min)}</dd>
@@ -76,23 +82,44 @@ const color = (kind: ReturnType<typeof reviewKind>): string =>
 	</div>
 {/snippet}
 
+{#snippet countCell(label: string, base: number, head: number, delta: number, color: string)}
+	<div class="min-w-0 tabular-nums">
+		<span class="eyebrow mb-1 block md:hidden">{label}</span>
+		<strong class="block whitespace-nowrap font-semibold text-sm"
+			>{formatCount(base)}
+			→ {formatCount(head)}</strong
+		>
+		<span class="mt-0.5 block text-xs" style:color={color}>
+			{signedCount(delta)}
+		</span>
+	</div>
+{/snippet}
+
 <section aria-label="Repository comparison">
-	<header class="variant-heading">
-		<div class="summary-strip">
-			<div>
-				<strong style:color="var(--worse)">{reviewCount}</strong
-				><span>review</span>
+	<header class="my-4 flex justify-end">
+		<div class="flex gap-6">
+			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
+				<strong class="text-worse text-xl tabular-nums">{reviewCount}</strong>
+				<span class="text-muted text-xs">review</span>
 			</div>
-			<div>
-				<strong style:color="var(--better)">{improvedCount}</strong
-				><span>improved</span>
+			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
+				<strong class="text-better text-xl tabular-nums"
+					>{improvedCount}</strong
+				>
+				<span class="text-muted text-xs">improved</span>
 			</div>
-			<div><strong>{quietCount}</strong><span>quiet</span></div>
+			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
+				<strong class="text-xl tabular-nums">{quietCount}</strong>
+				<span class="text-muted text-xs">quiet</span>
+			</div>
 		</div>
 	</header>
 
-	<div class="scan-list">
-		<div class="scan-labels" aria-hidden="true">
+	<div class="overflow-hidden border border-hair bg-surface">
+		<div
+			class="eyebrow hidden grid-cols-scan items-center gap-4 px-4 py-3 md:grid"
+			aria-hidden="true"
+		>
 			<span>Repository</span>
 			<span>Check time</span>
 			<span>Scanner time</span>
@@ -106,208 +133,41 @@ const color = (kind: ReturnType<typeof reviewKind>): string =>
 				relativeDelta(diagnosticTotal(row.base), diagnosticTotal(row.head)),
 			)}
 			{const panics = $derived(row.head.panics - row.base.panics)}
-			<article class="scan-row">
-				<div class="repo-cell">
-					<span class="status-dot" style:background={color(kind)}></span>
+			<article
+				class="grid min-w-0 grid-cols-1 items-center gap-4 border-hair border-t p-4 sm:grid-cols-2 sm:gap-x-6 md:grid-cols-scan md:gap-x-4"
+			>
+				<div class="flex min-w-0 items-start gap-3 sm:max-md:col-span-full">
+					<span
+						class={`mt-1.5 size-2 shrink-0 rounded-full ${dotTone[kind]}`}
+					></span>
 					<div>
-						<a href={`https://github.com/${row.repositorySlug}`}
+						<a
+							class="block wrap-anywhere font-semibold text-sm"
+							href={`https://github.com/${row.repositorySlug}`}
 							>{row.repositorySlug}</a
 						>
-						<span class="status-label" style:color={color(kind)}>
+						<span class={`mt-0.5 block text-xs ${textTone[kind]}`}>
 							{kind === "worse" ? "needs review" : kind}
 						</span>
 					</div>
 				</div>
 				{@render timingCell("Check time", row.base.check, row.head.check)}
 				{@render timingCell("Scanner time", row.base.scanner, row.head.scanner)}
-				<div class="metric-cell">
-					<span class="mobile-label">Diagnostics</span>
-					<strong
-						>{formatCount(diagnosticTotal(row.base))}
-						→ {formatCount(diagnosticTotal(row.head))}</strong
-					>
-					<span class="delta" style:color={deltaColor(diagnosticsRate)}>
-						{signedCount(diagnostics)}
-					</span>
-				</div>
-				<div class="metric-cell">
-					<span class="mobile-label">Panics</span>
-					<strong>{row.base.panics} → {row.head.panics}</strong>
-					<span class="delta" style:color={deltaColor(panics, 1)}>
-						{signedCount(panics)}
-					</span>
-				</div>
+				{@render countCell(
+					"Diagnostics",
+					diagnosticTotal(row.base),
+					diagnosticTotal(row.head),
+					diagnostics,
+					deltaColor(diagnosticsRate),
+				)}
+				{@render countCell(
+					"Panics",
+					row.base.panics,
+					row.head.panics,
+					panics,
+					deltaColor(panics, 1),
+				)}
 			</article>
 		{/each}
 	</div>
 </section>
-
-<style>
-.variant-heading {
-	display: flex;
-	justify-content: flex-end;
-	margin: 1rem 0;
-}
-
-.summary-strip {
-	display: flex;
-	gap: 1.5rem;
-}
-
-.summary-strip div {
-	display: flex;
-	align-items: baseline;
-	gap: 0.4rem;
-	white-space: nowrap;
-}
-
-.summary-strip strong {
-	font-size: 1.25rem;
-	font-variant-numeric: tabular-nums;
-}
-
-.summary-strip span {
-	color: var(--muted);
-	font-size: 0.8rem;
-}
-
-.scan-list {
-	overflow: hidden;
-	border: 1px solid var(--hair);
-	background: var(--surface);
-}
-
-.scan-labels,
-.scan-row {
-	display: grid;
-	grid-template-columns: minmax(12rem, 1.35fr) repeat(3, minmax(9rem, 1fr)) minmax(
-			5rem,
-			0.55fr
-		);
-	gap: 1rem;
-	align-items: center;
-}
-
-.scan-labels {
-	padding: 0.8rem 1rem;
-	color: var(--muted);
-	font-size: 0.72rem;
-	font-weight: 650;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-}
-
-.scan-row {
-	min-width: 0;
-	padding: 1rem;
-	border-top: 1px solid var(--hair);
-}
-
-.repo-cell {
-	display: flex;
-	min-width: 0;
-	align-items: flex-start;
-	gap: 0.7rem;
-}
-
-.repo-cell a {
-	display: block;
-	overflow-wrap: anywhere;
-	font-size: 0.95rem;
-	font-weight: 600;
-}
-
-.status-dot {
-	width: 0.55rem;
-	height: 0.55rem;
-	flex: 0 0 auto;
-	margin-top: 0.35rem;
-	border-radius: 9999px;
-}
-
-.status-label {
-	display: block;
-	margin-top: 0.2rem;
-	font-size: 0.76rem;
-}
-
-.metric-cell {
-	min-width: 0;
-	font-variant-numeric: tabular-nums;
-}
-
-.metric-cell strong,
-.metric-cell > .delta {
-	display: block;
-}
-
-.metric-cell strong {
-	font-size: 0.86rem;
-	font-weight: 600;
-	white-space: nowrap;
-}
-
-.metric-cell > .delta {
-	margin-top: 0.2rem;
-	font-size: 0.76rem;
-}
-
-.stat-note {
-	color: var(--muted);
-}
-
-.stat-grid {
-	display: grid;
-	grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
-	gap: 0 0.6rem;
-	margin: 0.35rem 0 0;
-	color: var(--muted);
-	font-size: 0.7rem;
-	line-height: 1.35;
-}
-
-.stat-grid dt,
-.stat-grid dd {
-	margin: 0;
-	white-space: nowrap;
-}
-
-.mobile-label {
-	display: none;
-}
-
-@media (max-width: 850px) {
-	.scan-labels {
-		display: none;
-	}
-
-	.scan-row {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 1rem 1.5rem;
-	}
-
-	.repo-cell {
-		grid-column: 1 / -1;
-	}
-
-	.mobile-label {
-		display: block;
-		margin-bottom: 0.25rem;
-		color: var(--muted);
-		font-size: 0.7rem;
-		font-weight: 650;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-	}
-}
-
-@media (max-width: 560px) {
-	.scan-row {
-		grid-template-columns: 1fr;
-	}
-
-	.repo-cell {
-		grid-column: auto;
-	}
-}
-</style>

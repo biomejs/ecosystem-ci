@@ -1,117 +1,102 @@
 @import "tailwindcss";
 
-@theme {
+/* Dark only. Metric hues validated for contrast and colour-vision deficiency on #121211. */
+@theme static {
+	--color-page: #121211;
+	--color-surface: #1a1a19;
+	--color-ink: #f2f1ec;
+	--color-ink-2: #c3c2b7;
+	--color-muted: #898781;
+	--color-hair: #2c2c2a;
+	--color-base: #3d3d3a;
+	--color-blue: #3987e5;
+	--color-aqua: #199e70;
+	--color-orange: #d95926;
+	--color-violet: #a99ff0;
+	--color-sev-error: #b5b4ad;
+	--color-sev-warning: #6e6d67;
+	--color-sev-info: #3a3a37;
+	--color-worse: #e66767;
+	--color-better: #2fb344;
+
 	--text-compact: 0.6875rem;
 	--text-compact--line-height: 1rem;
 	--text-micro: 0.625rem;
 	--text-micro--line-height: 0.875rem;
+	--tracking-eyebrow: 0.04em;
+
 	--container-dashboard: 93.75rem;
+	--container-compare: 76rem;
 	--spacing-dashboard-table: 82.5rem;
+
+	/* repository, four metrics, severity */
+	--grid-template-columns-table: 12rem repeat(4, minmax(0, 1fr))
+		minmax(0, 1.2fr);
+	/* value column plus a fixed sparkline column */
+	--grid-template-columns-metric: minmax(0, 1fr) 5.5rem;
+	--grid-template-columns-severity: minmax(0, 1fr) 6rem;
+	/* label column plus base and head values */
+	--grid-template-columns-stats: auto minmax(0, 1fr) minmax(0, 1fr);
+	/* repository, three metric columns, panics */
+	--grid-template-columns-scan: minmax(12rem, 1.35fr)
+		repeat(3, minmax(9rem, 1fr)) minmax(5rem, 0.55fr);
+	/* baseline, arrow, compared, submit */
+	--grid-template-columns-picker: minmax(0, 1fr) auto minmax(0, 1fr) auto;
 }
 
-/* Dark only. Metric hues validated for contrast and colour-vision deficiency on #121211. */
 @layer base {
 	:root {
-		--page: #121211;
-		--surface: #1a1a19;
-		--ink: #f2f1ec;
-		--ink-2: #c3c2b7;
-		--muted: #898781;
-		--hair: #2c2c2a;
-		--base: #3d3d3a;
-		--blue: #3987e5;
-		--aqua: #199e70;
-		--orange: #d95926;
-		--violet: #a99ff0;
-		--sev-error: #b5b4ad;
-		--sev-warning: #6e6d67;
-		--sev-info: #3a3a37;
-		--worse: #e66767;
-		--better: #2fb344;
 		color-scheme: dark;
 	}
 
 	html {
 		min-height: 100vh;
-		background: var(--page);
-		color: var(--ink);
+		background: var(--color-page);
+		color: var(--color-ink);
 		font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 		font-size: 13px;
 		line-height: 1.35;
 	}
 
-	body {
-		margin: 0;
-	}
-
 	select {
 		color: inherit;
-		background: var(--surface);
+		background: var(--color-surface);
 	}
 
 	a {
 		color: inherit;
 		text-decoration: underline;
-		text-decoration-color: var(--base);
+		text-decoration-color: var(--color-base);
 		text-underline-offset: 3px;
 	}
 
 	a:hover {
-		text-decoration-color: var(--ink);
+		text-decoration-color: var(--color-ink);
 	}
 
 	a:focus-visible,
 	select:focus-visible,
 	[tabindex]:focus-visible {
-		outline: 2px solid var(--ink);
+		outline: 2px solid var(--color-ink);
 		outline-offset: 2px;
 	}
 }
 
-@layer components {
-	.mono {
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-	}
+/* small uppercase label above a control or column */
+@utility eyebrow {
+	font-size: var(--text-compact);
+	line-height: var(--text-compact--line-height);
+	font-weight: 600;
+	letter-spacing: var(--tracking-eyebrow);
+	text-transform: uppercase;
+	color: var(--color-muted);
+}
 
-	.num {
-		font-variant-numeric: tabular-nums;
-	}
-
-	.panel {
-		background: var(--surface);
-		border: 1px solid var(--hair);
-	}
-
-	.metric-cell {
-		grid-template-columns: minmax(0, 1fr) 5.5rem;
-	}
-
-	.severity-cell {
-		grid-template-columns: minmax(0, 1fr) 6rem;
-	}
-
-	.eyebrow {
-		font-size: 11px;
-		font-weight: 600;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-		color: var(--muted);
-	}
-
-	.ink-2 {
-		color: var(--ink-2);
-	}
-
-	.muted {
-		color: var(--muted);
-	}
-
-	/* legend swatch for a line metric */
-	.key {
-		display: inline-block;
-		width: 14px;
-		height: 2px;
-		vertical-align: middle;
-		border-radius: 1px;
-	}
+/* legend swatch for a line metric */
+@utility key {
+	display: inline-block;
+	width: 14px;
+	height: 2px;
+	vertical-align: middle;
+	border-radius: 1px;
 }
