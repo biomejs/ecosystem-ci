@@ -1,200 +1,75 @@
-import { spawn } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import manifest from "../data/manifest.json";
+import { ingestManifestObject } from "@biomejs/ecosystem-ci-ingest/ingest";
+import { getPlatformProxy } from "wrangler";
+import {
+	type LocalRun,
+	latestLocalRuns,
+	loadLocalRuns,
+	runPrefix,
+} from "./local-reports.js";
 
-interface TimingSample {
-	ordinal: number;
-	checkDurationNs: number;
-	scannerDurationNs: number;
-}
-
-interface Report {
-	summary: {
-		duration: number;
-		errors: number;
-		warnings: number;
-		scannerDuration: number;
-	};
-	diagnostics: Array<{
-		category?: string;
-		severity?: string;
-	}>;
-}
-
-const dashboardDirectory = fileURLToPath(new URL("..", import.meta.url));
-
-async function runWrangler(
-	arguments_: string[],
-	stdout: "ignore" | "inherit" = "inherit",
-): Promise<void> {
-	await new Promise<void>((resolvePromise, reject) => {
-		const child = spawn("pnpm", ["exec", "wrangler", ...arguments_], {
-			cwd: dashboardDirectory,
-			stdio: ["ignore", stdout, "inherit"],
-		});
-		child.once("error", reject);
-		child.once("close", (exitCode) => {
-			if (exitCode === 0) {
-				resolvePromise();
-				return;
-			}
-			reject(new Error(`wrangler exited with code ${exitCode}`));
-		});
-	});
-}
-
-function sql(value: string): string {
-	return `'${value.replaceAll("'", "''")}'`;
-}
-
-function durationMs(startedAt: string, completedAt: string): number {
-	return new Date(completedAt).getTime() - new Date(startedAt).getTime();
-}
-
-function diagnosticKind(category: string): "parse" | "panic" | "rule" {
-	if (category === "parse") return "parse";
-	if (category === "internalError/panic") return "panic";
-	return "rule";
-}
-
-const statements = ["PRAGMA foreign_keys = ON;", "DELETE FROM runs;"];
-
-for (const run of manifest.runs) {
-	statements.push(`INSERT INTO runs (
-		github_run_id,
-		run_attempt,
-		biome_branch,
-		biome_commit_sha,
-		status,
-		started_at,
-		completed_at
-	) VALUES (
-		${run.githubRunId},
-		${run.runAttempt},
-		${sql(run.biomeBranch)},
-		${sql(run.biomeCommitSha)},
-		${sql(run.status)},
-		${sql(run.startedAt)},
-		${sql(run.completedAt)}
-	);`);
-
-	for (const result of run.results) {
-		const reportPath = new URL(`../data/${result.report}`, import.meta.url);
-		const report = JSON.parse(await readFile(reportPath, "utf8")) as Report;
-		const checkOutcome =
-			report.summary.errors > 0 || report.summary.warnings > 0
-				? "failed"
-				: "passed";
-
-		statements.push(`INSERT INTO repository_results (
-			run_id,
-			repository_slug,
-			repository_commit_sha,
-			migration_outcome,
-			execution_status,
-			check_outcome,
-			report_status,
-			job_duration_ms,
-			raw_report_r2_key
-		) VALUES (
-			${run.githubRunId},
-			${sql(result.repositorySlug)},
-			${sql(result.repositoryCommitSha)},
-			NULL,
-			'completed',
-			${sql(checkOutcome)},
-			'available',
-			${durationMs(result.jobStartedAt, result.jobCompletedAt)},
-			${sql(result.report)}
-		);`);
-
-		// Imported artifacts carry no repetition data, so the report's own
-		// summary stands as the single sample unless the manifest has more.
-		const samples: TimingSample[] =
-			"timingSamples" in result &&
-			Array.isArray(result.timingSamples) &&
-			result.timingSamples.length > 0
-				? (result.timingSamples as TimingSample[])
-				: [
-						{
-							ordinal: 1,
-							checkDurationNs: report.summary.duration,
-							scannerDurationNs: report.summary.scannerDuration,
-						},
-					];
-		for (const sample of samples) {
-			statements.push(`INSERT INTO check_samples (
-				repository_result_id,
-				ordinal,
-				check_duration_ns,
-				scanner_duration_ns
-			) VALUES (
-				(SELECT id FROM repository_results WHERE run_id = ${run.githubRunId} AND repository_slug = ${sql(result.repositorySlug)}),
-				${sample.ordinal},
-				${sample.checkDurationNs},
-				${sample.scannerDurationNs}
-			);`);
-		}
-
-		const counts = new Map<string, number>();
-		for (const diagnostic of report.diagnostics) {
-			const category = diagnostic.category ?? "uncategorized";
-			const severity = diagnostic.severity ?? "unknown";
-			const kind = diagnosticKind(category);
-			const key = JSON.stringify([kind, severity, category]);
-			counts.set(key, (counts.get(key) ?? 0) + 1);
-		}
-
-		for (const [key, count] of counts) {
-			const [kind, severity, category] = JSON.parse(key) as [
-				string,
-				string,
-				string,
-			];
-			statements.push(`INSERT INTO diagnostic_counts (
-				repository_result_id,
-				kind,
-				severity,
-				category,
-				count
-			) VALUES (
-				(SELECT id FROM repository_results WHERE run_id = ${run.githubRunId} AND repository_slug = ${sql(result.repositorySlug)}),
-				${sql(kind)},
-				${sql(severity)},
-				${sql(category)},
-				${count}
-			);`);
-		}
-	}
-}
-
-const seedPath = "/tmp/biome-ecosystem-ci-dashboard-seed.sql";
-await writeFile(seedPath, statements.join("\n"));
-
-await runWrangler(["d1", "execute", "DB", "--local", "--file", seedPath]);
-
-for (const run of manifest.runs) {
-	for (const result of run.results) {
-		const reportPath = new URL(`../data/${result.report}`, import.meta.url)
-			.pathname;
-		await runWrangler(
-			[
-				"r2",
-				"object",
-				"put",
-				`biome-ecosystem-ci-reports/${result.report}`,
-				"--file",
-				reportPath,
-				"--content-type",
-				"application/json",
-				"--local",
-			],
-			"ignore",
+export async function seedLocalRuns(
+	runs: LocalRun[],
+	env: CloudflareEnv,
+): Promise<number> {
+	if (runs.length === 0) {
+		throw new Error(
+			"No downloaded runs found. Run just reports-download or just reports-import --no-seed first.",
 		);
 	}
+	let reports = 0;
+	for (const run of latestLocalRuns(runs)) {
+		// Clear this attempt's old reports so a repeat seed preserves sparse results.
+		let cursor: string | undefined;
+		do {
+			const page = await env.REPORTS.list({
+				prefix: `${runPrefix(run.manifest)}/reports/`,
+				cursor,
+			});
+			if (page.objects.length)
+				await env.REPORTS.delete(page.objects.map((object) => object.key));
+			cursor = page.truncated ? page.cursor : undefined;
+		} while (cursor !== undefined);
+		for (const report of run.reports) {
+			await env.REPORTS.put(report.key, await readFile(report.path), {
+				httpMetadata: { contentType: "application/json" },
+			});
+		}
+		const incomingKey = `incoming/${runPrefix(run.manifest)}/manifest.json`;
+		await env.REPORTS.put(incomingKey, JSON.stringify(run.manifest));
+		const result = await ingestManifestObject(incomingKey, env);
+		reports += result.reportCount;
+	}
+	return reports;
 }
 
-console.log(
-	`Seeded ${manifest.runs.length} runs and ${manifest.runs.flatMap((run) => run.results).length} reports.`,
-);
+async function main(): Promise<void> {
+	const runs = latestLocalRuns(await loadLocalRuns());
+	if (runs.length === 0)
+		throw new Error(
+			"No downloaded runs found. Run just reports-download or just reports-import --no-seed first.",
+		);
+	const dashboardDirectory = fileURLToPath(new URL("..", import.meta.url));
+	const platform = await getPlatformProxy<CloudflareEnv>({
+		configPath: join(dashboardDirectory, "wrangler.jsonc"),
+		persist: { path: join(dashboardDirectory, ".wrangler/state/v3") },
+	});
+	try {
+		const reports = await seedLocalRuns(runs, platform.env);
+		console.log(`Seeded ${runs.length} runs and ${reports} reports.`);
+	} finally {
+		await platform.dispose();
+	}
+}
+
+if (
+	process.argv[1] &&
+	resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+	main().catch((error: unknown) => {
+		console.error(error instanceof Error ? error.message : error);
+		process.exitCode = 1;
+	});
+}

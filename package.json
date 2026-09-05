@@ -9,6 +9,7 @@
 		"dev": "pnpm --dir dashboard run dev",
 		"build": "pnpm --dir dashboard run build && pnpm --dir ingest run build",
 		"check": "pnpm --dir dashboard run check",
+		"reports:download": "pnpm --dir dashboard run reports:download",
 		"reports:import": "pnpm --dir dashboard run reports:import",
 		"reports:diagnostics": "pnpm --dir dashboard run reports:diagnostics",
 		"deploy": "pnpm --dir dashboard run deploy && pnpm --dir ingest run deploy"

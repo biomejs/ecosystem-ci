@@ -13,6 +13,7 @@
 		"db:migrate:remote": "wrangler d1 migrations apply DB --remote",
 		"db:seed:local": "tsx scripts/seed-local.ts",
 		"db:setup:local": "pnpm run db:migrate:local && pnpm run db:seed:local",
+		"reports:download": "tsx scripts/download-r2.ts",
 		"reports:import": "tsx scripts/import-ci-runs.ts",
 		"reports:diagnostics": "tsx scripts/read-diagnostics.ts"
 	},

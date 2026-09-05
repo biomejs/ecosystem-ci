@@ -1,5 +1,5 @@
-import { describe, expect, test } from "vitest";
-import { loadManifest, resolveGitHubToken } from "./import-ci-runs";
+import { describe, expect, test, vi } from "vitest";
+import { githubCollection, resolveGitHubToken } from "./import-ci-runs";
 
 describe("resolveGitHubToken", () => {
 	test("prefers GITHUB_TOKEN over every other source", async () => {
@@ -35,20 +35,21 @@ describe("resolveGitHubToken", () => {
 	});
 });
 
-describe("loadManifest", () => {
-	test("starts empty when the generated manifest is absent", async () => {
-		const manifest = await loadManifest("workflow-id", async () => {
-			throw Object.assign(new Error("missing"), { code: "ENOENT" });
-		});
-
-		expect(manifest).toEqual({ workflow: "workflow-id", runs: [] });
-	});
-
-	test("does not hide other read failures", async () => {
+test("collects report and metadata artifacts beyond the first GitHub page", async () => {
+	const firstPage = Array.from({ length: 100 }, (_, id) => ({ id }));
+	const fetchMock = vi
+		.spyOn(globalThis, "fetch")
+		.mockResolvedValueOnce(Response.json({ artifacts: firstPage }))
+		.mockResolvedValueOnce(Response.json({ artifacts: [{ id: 100 }] }));
+	try {
 		expect(
-			loadManifest("workflow-id", async () => {
-				throw Object.assign(new Error("denied"), { code: "EACCES" });
-			}),
-		).rejects.toThrow("denied");
-	});
+			await githubCollection(
+				"/repos/biomejs/ecosystem-ci/actions/runs/123/artifacts",
+				"artifacts",
+			),
+		).toHaveLength(101);
+		expect(fetchMock.mock.calls[1][0]).toContain("page=2");
+	} finally {
+		fetchMock.mockRestore();
+	}
 });
