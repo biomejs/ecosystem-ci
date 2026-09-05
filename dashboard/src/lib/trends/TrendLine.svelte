@@ -1,7 +1,4 @@
 <script lang="ts">
-// One metric for one repository. A detected change is drawn as the baseline (grey
-// hairline) and the change point (vertical marker in the metric's hue). Time metrics
-// also draw the min–max band of each run's samples behind the median line.
 import type { Run } from "./data";
 import { linearDomain } from "./domain";
 import { formatDay, niceTicks } from "./format";

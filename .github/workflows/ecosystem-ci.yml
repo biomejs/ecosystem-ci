@@ -205,7 +205,6 @@ jobs:
 
     name: Test ${{ matrix.id }}
     needs: build-biome
-    # Five repetitions of the largest check take about five minutes; leave headroom.
     timeout-minutes: 15
     runs-on: depot-ubuntu-24.04-arm-16
     steps:
@@ -254,8 +253,6 @@ jobs:
         id: test
         working-directory: repository/${{ matrix.working-directory }}
         env:
-          # Number of identical repetitions of the check. Each repetition that
-          # writes a valid report contributes one timing sample.
           CHECK_SAMPLES: 5
         run: |
           # Define report file path

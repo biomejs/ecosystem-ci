@@ -1,8 +1,5 @@
 PRAGMA foreign_keys = ON;
 
--- A repository result's timing is a set of samples, one per repetition of the
--- check within the job. Statistics are computed at read time; no single sample
--- statistic is stored on the result.
 CREATE TABLE check_samples (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	repository_result_id INTEGER NOT NULL REFERENCES repository_results(id) ON DELETE CASCADE,
