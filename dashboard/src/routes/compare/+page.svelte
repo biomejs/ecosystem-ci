@@ -1,9 +1,15 @@
 <script lang="ts">
+import { page } from "$app/state";
 import { formatDateTime, shortSha } from "$lib/trends/format";
 import type { PageData } from "./$types";
 import ComparisonTable from "./ComparisonTable.svelte";
+import { selectTimingView } from "./timing-view";
 
 let { data }: { data: PageData } = $props();
+
+const timingView = $derived(
+	selectTimingView(page.url.searchParams.get("view")),
+);
 
 const runLabel = (run: (typeof data.runs)[number]): string =>
 	`${run.biomeBranch} · ${formatDateTime(run.startedAt)} · ${shortSha(run.biomeCommitSha)}`;
@@ -76,6 +82,7 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 				</select>
 				{@render runSummary(data.head)}
 			</label>
+			<input type="hidden" name="view" value={timingView}>
 			<button
 				class="h-10 w-full border border-base bg-page px-4 font-semibold hover:bg-hair md:w-auto"
 				type="submit"
@@ -94,6 +101,6 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 			No shared repository results.
 		</p>
 	{:else}
-		<ComparisonTable comparisons={data.comparisons} />
+		<ComparisonTable comparisons={data.comparisons} {timingView} />
 	{/if}
 </main>

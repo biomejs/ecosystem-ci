@@ -1,19 +1,22 @@
 <script lang="ts">
-import type { TimingStats } from "$lib/timing";
-import { formatCount, formatMs, formatPct } from "$lib/trends/format";
+import { formatCount } from "$lib/trends/format";
 import {
 	deltaColor,
 	diagnosticDelta,
 	diagnosticTotal,
 	impact,
-	medianMs,
-	percentDelta,
 	relativeDelta,
 	reviewKind,
 } from "./comparison";
+import TimingCell from "./TimingCell.svelte";
+import TimingViewSwitch from "./TimingViewSwitch.svelte";
+import type { TimingView } from "./timing-view";
 import type { RepositoryComparison } from "./types";
 
-let { comparisons }: { comparisons: RepositoryComparison[] } = $props();
+let {
+	comparisons,
+	timingView,
+}: { comparisons: RepositoryComparison[]; timingView: TimingView } = $props();
 
 const rows = $derived(
 	[...comparisons].sort((left, right) => {
@@ -48,40 +51,6 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 };
 </script>
 
-{#snippet timingCell(label: string, base: TimingStats | null, head: TimingStats | null)}
-	{const delta = $derived(percentDelta(medianMs(base), medianMs(head)))}
-	<div class="min-w-0 tabular-nums">
-		<span class="eyebrow mb-1 block md:hidden">{label}</span>
-		<strong class="block whitespace-nowrap font-semibold text-sm"
-			>{base === null ? "—" : formatMs(base.median)}
-			→
-			{head === null ? "—" : formatMs(head.median)}</strong
-		>
-		<span class="mt-0.5 block text-xs" style:color={deltaColor(delta)}>
-			{delta === null ? "no delta" : formatPct(delta)}
-			<span class="text-muted">median</span>
-		</span>
-		{#if base !== null || head !== null}
-			<dl
-				class="mt-1.5 grid grid-cols-stats gap-x-2.5 gap-y-0 text-compact text-muted *:whitespace-nowrap"
-			>
-				<dt>min</dt>
-				<dd>{base === null ? "—" : formatMs(base.min)}</dd>
-				<dd>{head === null ? "—" : formatMs(head.min)}</dd>
-				<dt>mean</dt>
-				<dd>{base === null ? "—" : formatMs(base.mean)}</dd>
-				<dd>{head === null ? "—" : formatMs(head.mean)}</dd>
-				<dt>max</dt>
-				<dd>{base === null ? "—" : formatMs(base.max)}</dd>
-				<dd>{head === null ? "—" : formatMs(head.max)}</dd>
-				<dt>samples</dt>
-				<dd>{base === null ? "—" : base.count}</dd>
-				<dd>{head === null ? "—" : head.count}</dd>
-			</dl>
-		{/if}
-	</div>
-{/snippet}
-
 {#snippet countCell(label: string, base: number, head: number, delta: number, color: string)}
 	<div class="min-w-0 tabular-nums">
 		<span class="eyebrow mb-1 block md:hidden">{label}</span>
@@ -96,7 +65,8 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 {/snippet}
 
 <section aria-label="Repository comparison">
-	<header class="my-4 flex justify-end">
+	<header class="my-4 flex flex-wrap items-center justify-between gap-3">
+		<TimingViewSwitch current={timingView} />
 		<div class="flex gap-6">
 			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
 				<strong class="text-worse text-xl tabular-nums">{reviewCount}</strong>
@@ -151,8 +121,20 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 						</span>
 					</div>
 				</div>
-				{@render timingCell("Check time", row.base.check, row.head.check)}
-				{@render timingCell("Scanner time", row.base.scanner, row.head.scanner)}
+				<TimingCell
+					label="Check time"
+					base={row.base.check}
+					head={row.head.check}
+					hue="var(--color-blue)"
+					view={timingView}
+				/>
+				<TimingCell
+					label="Scanner time"
+					base={row.base.scanner}
+					head={row.head.scanner}
+					hue="var(--color-violet)"
+					view={timingView}
+				/>
 				{@render countCell(
 					"Diagnostics",
 					diagnosticTotal(row.base),

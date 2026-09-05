@@ -35,11 +35,9 @@
 	/* value column plus a fixed sparkline column */
 	--grid-template-columns-metric: minmax(0, 1fr) 5.5rem;
 	--grid-template-columns-severity: minmax(0, 1fr) 6rem;
-	/* label column plus base and head values */
-	--grid-template-columns-stats: auto minmax(0, 1fr) minmax(0, 1fr);
-	/* repository, three metric columns, panics */
-	--grid-template-columns-scan: minmax(12rem, 1.35fr)
-		repeat(3, minmax(9rem, 1fr)) minmax(5rem, 0.55fr);
+	/* repository, two timing columns, diagnostics, panics */
+	--grid-template-columns-scan: minmax(8rem, 0.7fr) repeat(2, minmax(9rem, 1fr))
+		minmax(6rem, 0.6fr) minmax(5rem, 0.55fr);
 	/* baseline, arrow, compared, submit */
 	--grid-template-columns-picker: minmax(0, 1fr) auto minmax(0, 1fr) auto;
 }

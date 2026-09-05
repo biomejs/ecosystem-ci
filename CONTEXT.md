@@ -44,6 +44,9 @@ A customer repository's results over runs from the same Biome branch. Runs from 
 **Branch comparison**:
 A repository-by-repository comparison between two runs. A customer repository can be compared only when both runs contain its result.
 
+**Timing view**:
+How the compare page draws a timing comparison. *Ranges* puts each run's fastest-to-slowest samples on its own row with the median marked; *Shift* draws the move from the base median to the head median over the base run's spread. Both read the same timing samples, so switching views never changes the numbers.
+
 **Diagnostic count**:
 A repository-level total grouped by diagnostic kind, severity, and category. It does not represent an individual diagnostic or source file.
 
