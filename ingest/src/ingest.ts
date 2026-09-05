@@ -10,12 +10,19 @@ import {
 	RepositorySlugSchema,
 	type RunManifest,
 	RunManifestSchema,
+	type TimingSample,
 } from "./schemas.js";
 
 export const INGEST_QUEUE_NAME = "ecosystem-ci-ingest";
 export const REPORTS_BUCKET_NAME = "biome-ecosystem-ci-reports";
 
-export type { ManifestTarget, R2EventNotification, RawReport, RunManifest };
+export type {
+	ManifestTarget,
+	R2EventNotification,
+	RawReport,
+	RunManifest,
+	TimingSample,
+};
 
 interface ReportRow {
 	repositorySlug: string;
@@ -24,9 +31,11 @@ interface ReportRow {
 	executionStatus: ManifestTarget["executionStatus"];
 	checkOutcome: "passed" | "failed";
 	jobDurationMs: number;
-	checkDurationNs: number;
-	scannerDurationNs: number;
 	rawReportR2Key: string;
+}
+
+interface TimingSampleRow extends TimingSample {
+	repositorySlug: string;
 }
 
 interface DiagnosticCountRow {
@@ -95,12 +104,48 @@ function diagnosticKind(category: string): "rule" | "parse" | "panic" {
 	return "rule";
 }
 
+/**
+ * The manifest's samples are authoritative. A target without samples (schema
+ * version 1) contributes the report's own summary as its single sample.
+ */
+export function timingSamplesFor(
+	repositorySlug: string,
+	target: ManifestTarget,
+	report: RawReport,
+): TimingSample[] {
+	const samples = target.timingSamples ?? [];
+	if (samples.length === 0) {
+		return [
+			{
+				ordinal: 1,
+				checkDurationNs: report.summary.duration,
+				scannerDurationNs: report.summary.scannerDuration,
+			},
+		];
+	}
+	const matchesReport = samples.some(
+		(sample) =>
+			sample.checkDurationNs === report.summary.duration &&
+			sample.scannerDurationNs === report.summary.scannerDuration,
+	);
+	if (!matchesReport) {
+		console.warn(
+			`Timing samples for ${repositorySlug} do not include the raw report's own summary`,
+		);
+	}
+	return samples.toSorted((a, b) => a.ordinal - b.ordinal);
+}
+
 export function summarizeReport(
 	repositorySlug: string,
 	target: ManifestTarget,
 	report: RawReport,
 	rawReportR2Key: string,
-): { report: ReportRow; diagnostics: DiagnosticCountRow[] } {
+): {
+	report: ReportRow;
+	samples: TimingSampleRow[];
+	diagnostics: DiagnosticCountRow[];
+} {
 	const counts = new Map<string, DiagnosticCountRow>();
 	for (const diagnostic of report.diagnostics) {
 		const { category, severity } = diagnostic;
@@ -131,10 +176,12 @@ export function summarizeReport(
 					: "passed",
 			jobDurationMs:
 				Date.parse(target.jobCompletedAt) - Date.parse(target.jobStartedAt),
-			checkDurationNs: report.summary.duration,
-			scannerDurationNs: report.summary.scannerDuration,
 			rawReportR2Key,
 		},
+		samples: timingSamplesFor(repositorySlug, target, report).map((sample) => ({
+			repositorySlug,
+			...sample,
+		})),
 		diagnostics: [...counts.values()],
 	};
 }
@@ -157,7 +204,11 @@ async function loadReportRows(
 	bucket: R2Bucket,
 	manifest: RunManifest,
 	reportsPrefix: string,
-): Promise<{ reports: ReportRow[]; diagnostics: DiagnosticCountRow[] }> {
+): Promise<{
+	reports: ReportRow[];
+	samples: TimingSampleRow[];
+	diagnostics: DiagnosticCountRow[];
+}> {
 	const objects = await listReportObjects(bucket, reportsPrefix);
 	const summaries = await Promise.all(
 		objects.map(async (object) => {
@@ -191,6 +242,7 @@ async function loadReportRows(
 	const valid = summaries.filter((value) => value !== null);
 	return {
 		reports: valid.map((value) => value.report),
+		samples: valid.flatMap((value) => value.samples),
 		diagnostics: valid.flatMap((value) => value.diagnostics),
 	};
 }
@@ -199,6 +251,7 @@ async function replaceD1Projection(
 	db: D1Database,
 	manifest: RunManifest,
 	reports: ReportRow[],
+	samples: TimingSampleRow[],
 	diagnostics: DiagnosticCountRow[],
 ): Promise<void> {
 	const run = db
@@ -233,7 +286,7 @@ async function replaceD1Projection(
 		.prepare(`INSERT INTO repository_results (
 		run_id, repository_slug, repository_commit_sha, migration_outcome,
 		execution_status, check_outcome, report_status, job_duration_ms,
-		check_duration_ns, scanner_duration_ns, raw_report_r2_key
+		raw_report_r2_key
 	)
 	SELECT ?,
 		json_extract(item.value, '$.repositorySlug'),
@@ -243,14 +296,31 @@ async function replaceD1Projection(
 		json_extract(item.value, '$.checkOutcome'),
 		'available',
 		json_extract(item.value, '$.jobDurationMs'),
-		json_extract(item.value, '$.checkDurationNs'),
-		json_extract(item.value, '$.scannerDurationNs'),
 		json_extract(item.value, '$.rawReportR2Key')
 	FROM json_each(?) AS item
 	WHERE (SELECT run_attempt FROM runs WHERE github_run_id = ?) = ?`)
 		.bind(
 			manifest.githubRunId,
 			JSON.stringify(reports),
+			manifest.githubRunId,
+			manifest.runAttempt,
+		);
+	const insertSamples = db
+		.prepare(`INSERT INTO check_samples (
+		repository_result_id, ordinal, check_duration_ns, scanner_duration_ns
+	)
+	SELECT repository_results.id,
+		json_extract(item.value, '$.ordinal'),
+		json_extract(item.value, '$.checkDurationNs'),
+		json_extract(item.value, '$.scannerDurationNs')
+	FROM json_each(?) AS item
+	JOIN repository_results
+		ON repository_results.run_id = ?
+		AND repository_results.repository_slug = json_extract(item.value, '$.repositorySlug')
+	WHERE (SELECT run_attempt FROM runs WHERE github_run_id = ?) = ?`)
+		.bind(
+			JSON.stringify(samples),
+			manifest.githubRunId,
 			manifest.githubRunId,
 			manifest.runAttempt,
 		);
@@ -278,6 +348,7 @@ async function replaceD1Projection(
 		run,
 		clearResults,
 		insertResults,
+		insertSamples,
 		insertDiagnostics,
 	]);
 	if (results.some((result) => !result.success)) {
@@ -314,12 +385,12 @@ export async function ingestManifestObject(
 			`Manifest identity does not match its R2 key: ${incomingKey}`,
 		);
 	}
-	const { reports, diagnostics } = await loadReportRows(
+	const { reports, samples, diagnostics } = await loadReportRows(
 		env.REPORTS,
 		manifest,
 		location.reportsPrefix,
 	);
-	await replaceD1Projection(env.DB, manifest, reports, diagnostics);
+	await replaceD1Projection(env.DB, manifest, reports, samples, diagnostics);
 	await env.REPORTS.put(location.canonicalKey, bytes, {
 		httpMetadata: incomingObject.httpMetadata,
 		customMetadata: incomingObject.customMetadata,

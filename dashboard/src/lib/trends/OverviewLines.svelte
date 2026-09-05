@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { Repo, Run, ValueKey } from "./data";
-import { seriesValues } from "./data";
+import { seriesRanges, seriesValues } from "./data";
 import { formatDay, formatPct, niceTicks } from "./format";
 import { hover } from "./hover.svelte";
 
@@ -30,32 +30,62 @@ const margin = { left: 54, right: 10, top: 8, bottom: 24 };
 const plotWidth = $derived(Math.max(10, width - margin.left - margin.right));
 const plotHeight = height - margin.top - margin.bottom;
 
+type Range = [number, number] | null;
+
 const rawSeries = $derived(
 	repos.map((repo) => ({
 		slug: repo.slug,
 		values: seriesValues(repo, metric),
+		ranges: seriesRanges(repo, metric),
 	})),
 );
 
-function relativeToFirst(values: (number | null)[]): (number | null)[] {
-	const baseline = values.find(
-		(value): value is number => value !== null && value !== 0,
-	);
+/** the first defined, non-zero median; ranges are expressed relative to the same value */
+function firstBaseline(values: (number | null)[]): number | undefined {
+	return values.find((value): value is number => value !== null && value !== 0);
+}
+
+function relativeToFirst(
+	values: (number | null)[],
+	baseline: number | undefined,
+): (number | null)[] {
 	if (baseline === undefined) return values.map(() => null);
 	return values.map((value) =>
 		value === null ? null : ((value - baseline) / baseline) * 100,
 	);
 }
 
+function relativeRanges(
+	ranges: Range[],
+	baseline: number | undefined,
+): Range[] {
+	if (baseline === undefined) return ranges.map(() => null);
+	return ranges.map((range) =>
+		range === null
+			? null
+			: [
+					((range[0] - baseline) / baseline) * 100,
+					((range[1] - baseline) / baseline) * 100,
+				],
+	);
+}
+
 const series = $derived(
-	rawSeries.map((item) => ({
-		slug: item.slug,
-		values: relative ? relativeToFirst(item.values) : item.values,
-	})),
+	rawSeries.map((item) => {
+		const baseline = relative ? firstBaseline(item.values) : undefined;
+		return {
+			slug: item.slug,
+			values: relative ? relativeToFirst(item.values, baseline) : item.values,
+			ranges: relative ? relativeRanges(item.ranges, baseline) : item.ranges,
+		};
+	}),
 );
 const allValues = $derived(
 	series.flatMap((item) =>
-		item.values.filter(
+		[
+			...item.values,
+			...item.ranges.flatMap((range) => (range === null ? [] : range)),
+		].filter(
 			(value): value is number => value !== null && (!logarithmic || value > 0),
 		),
 	),
@@ -135,6 +165,36 @@ function linePath(values: (number | null)[]): string {
 	return path;
 }
 
+/** the min–max band of one series, split wherever a run has no samples */
+function bandPath(values: (number | null)[], ranges: Range[]): string {
+	let path = "";
+	let top: string[] = [];
+	let bottom: string[] = [];
+	const flush = () => {
+		if (top.length > 1) {
+			path += `M${top.join(" L")} L${bottom.reverse().join(" L")} Z `;
+		}
+		top = [];
+		bottom = [];
+	};
+	ranges.forEach((range, index) => {
+		const value = values[index];
+		if (
+			range === null ||
+			value === null ||
+			value === undefined ||
+			(logarithmic && range[0] <= 0)
+		) {
+			flush();
+			return;
+		}
+		top.push(`${x(index).toFixed(1)} ${y(range[1]).toFixed(1)}`);
+		bottom.push(`${x(index).toFixed(1)} ${y(range[0]).toFixed(1)}`);
+	});
+	flush();
+	return path;
+}
+
 const xTicks = $derived.by(() => {
 	const maxTicks = Math.max(2, Math.min(7, Math.floor(plotWidth / 80)));
 	if (runs.length <= maxTicks) return runs.map((_, index) => index);
@@ -149,9 +209,16 @@ const focusIndex = $derived(hover.index ?? runs.length - 1);
 const focusValues = $derived(
 	series.flatMap((item) => {
 		const value = item.values[focusIndex];
-		return value === null || value === undefined || (logarithmic && value <= 0)
-			? []
-			: [{ slug: item.slug, value }];
+		if (value === null || value === undefined || (logarithmic && value <= 0))
+			return [];
+		const range = item.ranges[focusIndex] ?? null;
+		return [
+			{
+				slug: item.slug,
+				value,
+				range: range !== null && (!logarithmic || range[0] > 0) ? range : null,
+			},
+		];
 	}),
 );
 const focusRange = $derived.by(() => {
@@ -160,6 +227,14 @@ const focusRange = $derived.by(() => {
 	const noun = focusValues.length === 1 ? "report" : "reports";
 	return `${focusValues.length} ${noun} · ${displayFormat(Math.min(...values))} to ${displayFormat(Math.max(...values))}`;
 });
+
+function pointTitle(point: (typeof focusValues)[number]): string {
+	const range =
+		point.range === null
+			? ""
+			: ` · ${displayFormat(point.range[0])} to ${displayFormat(point.range[1])}`;
+	return `${point.slug}: ${displayFormat(point.value)} median${range}`;
+}
 
 function toggleLogarithmic(event: Event) {
 	logarithmic = (event.currentTarget as HTMLInputElement).checked;
@@ -190,7 +265,7 @@ function onkeydown(event: KeyboardEvent) {
 }
 </script>
 
-<section class="panel min-w-0 p-3">
+<section class="border border-hair bg-surface min-w-0 p-3">
 	<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
 		<h2 class="font-semibold">{title}</h2>
 		<div class="flex items-center gap-3 text-compact">
@@ -208,9 +283,9 @@ function onkeydown(event: KeyboardEvent) {
 			</label>
 		</div>
 	</div>
-	<p class="muted mb-1 text-compact">
+	<p class="text-muted mb-1 text-compact">
 		{formatDay(runs[focusIndex].startedAt)}
-		· {focusRange}
+		· {focusRange} · medians; bands and ticks span each run's samples
 	</p>
 	<div class="min-w-0 overflow-hidden" bind:clientWidth={width}>
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
@@ -231,19 +306,27 @@ function onkeydown(event: KeyboardEvent) {
 					x2={margin.left + plotWidth}
 					y1={y(tick)}
 					y2={y(tick)}
-					stroke="var(--hair)"
+					stroke="var(--color-hair)"
 				/>
 				<text
 					x={margin.left - 7}
 					y={y(tick) + 3.5}
 					text-anchor="end"
 					font-size="10.5"
-					fill="var(--muted)"
+					fill="var(--color-muted)"
 				>
 					{displayFormat(tick)}
 				</text>
 			{/each}
 
+			{#each series as item (item.slug)}
+				{const band = $derived(bandPath(item.values, item.ranges))}
+				{#if band}
+					<path d={band} fill={hue} opacity="0.07">
+						<title>{item.slug} · min–max of samples</title>
+					</path>
+				{/if}
+			{/each}
 			{#each series as item (item.slug)}
 				<path
 					d={linePath(item.values)}
@@ -264,7 +347,7 @@ function onkeydown(event: KeyboardEvent) {
 					y={height - 5}
 					text-anchor={index === 0 ? "start" : index === runs.length - 1 ? "end" : "middle"}
 					font-size="10.5"
-					fill="var(--muted)"
+					fill="var(--color-muted)"
 				>
 					{formatDay(runs[index].startedAt)}
 				</text>
@@ -276,11 +359,22 @@ function onkeydown(event: KeyboardEvent) {
 					x2={x(focusIndex)}
 					y1={margin.top}
 					y2={margin.top + plotHeight}
-					stroke="var(--ink-2)"
+					stroke="var(--color-ink-2)"
 				/>
 				{#each focusValues as point (point.slug)}
+					{#if point.range !== null && point.range[0] !== point.range[1]}
+						<line
+							x1={x(focusIndex)}
+							x2={x(focusIndex)}
+							y1={y(point.range[1])}
+							y2={y(point.range[0])}
+							stroke={hue}
+							stroke-width="1.5"
+							opacity="0.45"
+						/>
+					{/if}
 					<circle cx={x(focusIndex)} cy={y(point.value)} r="2.2" fill={hue}>
-						<title>{point.slug}: {displayFormat(point.value)}</title>
+						<title>{pointTitle(point)}</title>
 					</circle>
 				{/each}
 			{/if}

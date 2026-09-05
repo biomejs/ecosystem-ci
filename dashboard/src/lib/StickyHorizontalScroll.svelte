@@ -78,9 +78,9 @@ $effect(() => {
 	margin-bottom: -1.25rem;
 	overflow-x: auto;
 	overflow-y: hidden;
-	background: var(--surface);
-	border: 1px solid var(--hair);
-	scrollbar-color: var(--muted) var(--surface);
+	background: var(--color-surface);
+	border: 1px solid var(--color-hair);
+	scrollbar-color: var(--color-muted) var(--color-surface);
 }
 
 .scroll-proxy-content {

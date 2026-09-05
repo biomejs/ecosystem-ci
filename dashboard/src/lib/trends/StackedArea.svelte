@@ -129,14 +129,14 @@ function onkeydown(e: KeyboardEvent) {
 				x2={m.left + pw}
 				y1={y(t)}
 				y2={y(t)}
-				stroke="var(--hair)"
+				stroke="var(--color-hair)"
 			/>
 		{/each}
 		{#each layers as l, k (l.key)}
 			<path
 				d={areaPath(k)}
 				fill={l.hue}
-				stroke="var(--surface)"
+				stroke="var(--color-surface)"
 				stroke-width="1"
 				stroke-linejoin="round"
 			/>
@@ -148,7 +148,7 @@ function onkeydown(e: KeyboardEvent) {
 					y={height - 5}
 					text-anchor={i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle"}
 					font-size="10.5"
-					fill="var(--muted)"
+					fill="var(--color-muted)"
 				>
 					{formatDay(runs[i].startedAt)}
 				</text>
@@ -160,7 +160,7 @@ function onkeydown(e: KeyboardEvent) {
 				x2={x(hi)}
 				y1={m.top}
 				y2={m.top + ph}
-				stroke="var(--ink-2)"
+				stroke="var(--color-ink-2)"
 			/>
 		{/if}
 	</svg>

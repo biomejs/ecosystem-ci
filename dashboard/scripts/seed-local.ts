@@ -3,6 +3,12 @@ import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import manifest from "../data/manifest.json";
 
+interface TimingSample {
+	ordinal: number;
+	checkDurationNs: number;
+	scannerDurationNs: number;
+}
+
 interface Report {
 	summary: {
 		duration: number;
@@ -90,8 +96,6 @@ for (const run of manifest.runs) {
 			check_outcome,
 			report_status,
 			job_duration_ms,
-			check_duration_ns,
-			scanner_duration_ns,
 			raw_report_r2_key
 		) VALUES (
 			${run.githubRunId},
@@ -102,10 +106,36 @@ for (const run of manifest.runs) {
 			${sql(checkOutcome)},
 			'available',
 			${durationMs(result.jobStartedAt, result.jobCompletedAt)},
-			${report.summary.duration},
-			${report.summary.scannerDuration},
 			${sql(result.report)}
 		);`);
+
+		// Imported artifacts carry no repetition data, so the report's own
+		// summary stands as the single sample unless the manifest has more.
+		const samples: TimingSample[] =
+			"timingSamples" in result &&
+			Array.isArray(result.timingSamples) &&
+			result.timingSamples.length > 0
+				? (result.timingSamples as TimingSample[])
+				: [
+						{
+							ordinal: 1,
+							checkDurationNs: report.summary.duration,
+							scannerDurationNs: report.summary.scannerDuration,
+						},
+					];
+		for (const sample of samples) {
+			statements.push(`INSERT INTO check_samples (
+				repository_result_id,
+				ordinal,
+				check_duration_ns,
+				scanner_duration_ns
+			) VALUES (
+				(SELECT id FROM repository_results WHERE run_id = ${run.githubRunId} AND repository_slug = ${sql(result.repositorySlug)}),
+				${sample.ordinal},
+				${sample.checkDurationNs},
+				${sample.scannerDurationNs}
+			);`);
+		}
 
 		const counts = new Map<string, number>();
 		for (const diagnostic of report.diagnostics) {

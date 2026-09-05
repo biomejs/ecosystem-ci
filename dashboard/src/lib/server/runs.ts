@@ -1,3 +1,5 @@
+import { parseTimingSamples, type TimingSample } from "$lib/timing";
+
 export interface RunSummary {
 	githubRunId: number;
 	runAttempt: number;
@@ -14,8 +16,8 @@ export interface RunSummary {
 export interface HistoryPoint {
 	githubRunId: number;
 	repositorySlug: string;
-	checkDurationNs: number | null;
-	scannerDurationNs: number | null;
+	/** one per repetition of the check, in repetition order; empty when none were recorded */
+	timingSamples: TimingSample[];
 	errors: number;
 	warnings: number;
 	infos: number;
@@ -43,8 +45,7 @@ interface RunRow {
 interface HistoryPointRow {
 	github_run_id: number;
 	repository_slug: string;
-	check_duration_ns: number | null;
-	scanner_duration_ns: number | null;
+	timing_samples: string | null;
 	errors: number;
 	warnings: number;
 	infos: number;
@@ -124,8 +125,19 @@ export async function listRepositoryHistory(
 			`SELECT
 				r.github_run_id,
 				rr.repository_slug,
-				rr.check_duration_ns,
-				rr.scanner_duration_ns,
+				(
+					SELECT json_group_array(json_object(
+						'ordinal', cs.ordinal,
+						'checkDurationNs', cs.check_duration_ns,
+						'scannerDurationNs', cs.scanner_duration_ns
+					))
+					FROM (
+						SELECT ordinal, check_duration_ns, scanner_duration_ns
+						FROM check_samples
+						WHERE repository_result_id = rr.id
+						ORDER BY ordinal
+					) AS cs
+				) AS timing_samples,
 				COALESCE(
 					SUM(CASE WHEN dc.severity = 'error' AND dc.kind != 'panic' THEN dc.count ELSE 0 END),
 					0
@@ -158,8 +170,7 @@ export async function listRepositoryHistory(
 	return results.map((row) => ({
 		githubRunId: row.github_run_id,
 		repositorySlug: row.repository_slug,
-		checkDurationNs: row.check_duration_ns,
-		scannerDurationNs: row.scanner_duration_ns,
+		timingSamples: parseTimingSamples(row.timing_samples),
 		errors: row.errors,
 		warnings: row.warnings,
 		infos: row.infos,

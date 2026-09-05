@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-09-03
+amended: 2026-09-04
 ---
 
 # Ingest run manifests through R2 and Queues
@@ -17,7 +18,7 @@ runs/<run-id>/attempts/<attempt>/
 incoming/runs/<run-id>/attempts/<attempt>/manifest.json
 ```
 
-The manifest contains run metadata and a `targets` map keyed by the full GitHub repository slug. Each target contains metadata that cannot be derived from its raw report. The manifest does not inventory report objects. The consumer lists the attempt's `reports/` prefix, derives each repository slug from its object key, and joins the report to the corresponding target metadata. An absent report remains absent and produces no repository result.
+The manifest contains run metadata and a `targets` map keyed by the full GitHub repository slug. Each target contains metadata that cannot be derived from its raw report. From schema version 2 this includes the target's timing samples: one entry per repetition of the check, with its ordinal, check duration, and scanner duration. The raw report is the output of the last repetition that produced one, so only one report per target is stored. The manifest does not inventory report objects. The consumer lists the attempt's `reports/` prefix, derives each repository slug from its object key, and joins the report to the corresponding target metadata. An absent report remains absent and produces no repository result. The consumer accepts schema versions 1 and 2. When a target carries timing samples they are the source of the result's durations; a version 1 target, or one without samples, contributes the report's own summary as its single sample. A sample set that does not include the report's own summary is logged and still accepted.
 
 An R2 object-create notification for incoming manifests sends one message per published attempt to a Cloudflare Queue. The consumer writes the run, its repository results, and diagnostic counts to D1. It updates a run only when the attempt is newer than the stored attempt. After the D1 write succeeds, the consumer copies the incoming manifest to the attempt's canonical folder, deletes the incoming object, and acknowledges the message. Processing is idempotent because queue messages can be delivered more than once and an R2 move is a copy followed by a delete.
 
@@ -26,6 +27,8 @@ R2 retains every attempt, while D1 exposes only the latest attempt for each run.
 ## Considered options
 
 We rejected notifications for individual reports because they provide no reliable completion signal for a run attempt. We rejected listing report paths in the manifest because R2 can list the attempt folder and missing reports are deliberately represented by absence. We also rejected the current mutable local manifest as a production input because it is a development import index rather than an immutable publication record.
+
+For timing samples we rejected uploading every repetition's report, because reports reach several megabytes and the repetitions differ only in timing, and we rejected a separate timing object beside each report, because the consumer derives repository slugs from report keys and slugs may contain dots.
 
 ## Consequences
 

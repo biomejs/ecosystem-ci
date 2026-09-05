@@ -229,5 +229,5 @@ export function activeFindings(
 
 /** text colour for a significant delta — colour never stands alone: pair with ▲/▼ and weight */
 export const deltaColor = (f: Finding): string =>
-	f.worse ? "var(--worse)" : "var(--better)";
+	f.worse ? "var(--color-worse)" : "var(--color-better)";
 export const deltaGlyph = (f: Finding): string => (f.worse ? "▲" : "▼");

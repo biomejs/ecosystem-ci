@@ -1,6 +1,4 @@
 <script lang="ts">
-// One metric for one repository. A detected change is drawn as the baseline (grey
-// hairline) and the change point (vertical marker in the metric's hue).
 import type { Run } from "./data";
 import { linearDomain } from "./domain";
 import { formatDay, niceTicks } from "./format";
@@ -17,10 +15,13 @@ let {
 	softRelativeSpan = null,
 	minimumSpan = null,
 	markers = [],
+	ranges = [],
 	ariaLabel,
 }: {
 	runs: Run[];
 	values: (number | null)[];
+	/** [min, max] of each run's samples, aligned with values; drawn as a band */
+	ranges?: ([number, number] | null)[];
 	hue: string;
 	zeroBased?: boolean;
 	height?: number;
@@ -48,7 +49,12 @@ const pw = $derived(Math.max(10, width - m.left - m.right));
 const ph = $derived(height - m.top - m.bottom);
 
 const domain = $derived(
-	linearDomain(values, { baseline, zeroBased, softRelativeSpan, minimumSpan }),
+	linearDomain([...values, ...ranges.flatMap((r) => (r === null ? [] : r))], {
+		baseline,
+		zeroBased,
+		softRelativeSpan,
+		minimumSpan,
+	}),
 );
 const ticks = $derived(
 	niceTicks(domain[0], domain[1], 3).filter(
@@ -73,6 +79,30 @@ const path = $derived.by(() => {
 		d += `${pen ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)} `;
 		pen = true;
 	});
+	return d;
+});
+
+/** closed shapes between min and max, one per contiguous stretch of runs with samples */
+const bandPath = $derived.by(() => {
+	let d = "";
+	let top: string[] = [];
+	let bottom: string[] = [];
+	const flush = () => {
+		if (top.length > 1) {
+			d += `M${top.join(" L")} L${bottom.reverse().join(" L")} Z `;
+		}
+		top = [];
+		bottom = [];
+	};
+	ranges.forEach((r, i) => {
+		if (r === null || values[i] === null) {
+			flush();
+			return;
+		}
+		top.push(`${x(i).toFixed(1)} ${y(r[1]).toFixed(1)}`);
+		bottom.push(`${x(i).toFixed(1)} ${y(r[0]).toFixed(1)}`);
+	});
+	flush();
 	return d;
 });
 
@@ -126,7 +156,7 @@ function onkeydown(e: KeyboardEvent) {
 				x2={m.left + pw}
 				y1={y(t)}
 				y2={y(t)}
-				stroke="var(--hair)"
+				stroke="var(--color-hair)"
 			/>
 		{/each}
 		{#if baseline !== null}
@@ -135,7 +165,7 @@ function onkeydown(e: KeyboardEvent) {
 				x2={m.left + pw}
 				y1={y(baseline)}
 				y2={y(baseline)}
-				stroke="var(--muted)"
+				stroke="var(--color-muted)"
 			/>
 		{/if}
 		{#each markers as mi (mi)}
@@ -156,13 +186,16 @@ function onkeydown(e: KeyboardEvent) {
 					y={height - 5}
 					text-anchor={i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle"}
 					font-size="10.5"
-					fill="var(--muted)"
+					fill="var(--color-muted)"
 				>
 					{formatDay(runs[i].startedAt)}
 				</text>
 			{/each}
 		{/if}
 
+		{#if bandPath}
+			<path d={bandPath} fill={hue} opacity="0.18" />
+		{/if}
 		<path
 			d={path}
 			fill="none"
@@ -176,7 +209,7 @@ function onkeydown(e: KeyboardEvent) {
 				cx={x(values.length - 1)}
 				cy={y(last)}
 				r="5.5"
-				fill="var(--surface)"
+				fill="var(--color-surface)"
 			/>
 			<circle cx={x(values.length - 1)} cy={y(last)} r="3.5" fill={hue} />
 		{/if}
@@ -187,10 +220,15 @@ function onkeydown(e: KeyboardEvent) {
 				x2={x(hi)}
 				y1={m.top}
 				y2={m.top + ph}
-				stroke="var(--base)"
+				stroke="var(--color-base)"
 			/>
 			{#if hoverValue !== null}
-				<circle cx={x(hi)} cy={y(hoverValue)} r="5" fill="var(--surface)" />
+				<circle
+					cx={x(hi)}
+					cy={y(hoverValue)}
+					r="5"
+					fill="var(--color-surface)"
+				/>
 				<circle cx={x(hi)} cy={y(hoverValue)} r="3" fill={hue} />
 			{/if}
 		{/if}

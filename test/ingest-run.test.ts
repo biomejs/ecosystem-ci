@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import ingestWorker from "../ingest/src";
 import {
 	handleR2Event,
@@ -10,10 +10,16 @@ import {
 	parseRunManifest,
 	repositorySlugFromReportKey,
 	summarizeReport,
+	timingSamplesFor,
 } from "../ingest/src/ingest";
 
+const timingSamples = [
+	{ ordinal: 1, checkDurationNs: 320, scannerDurationNs: 210 },
+	{ ordinal: 2, checkDurationNs: 300, scannerDurationNs: 200 },
+] as const;
+
 const manifest = {
-	schemaVersion: 1,
+	schemaVersion: 2,
 	githubRunId: 123,
 	runAttempt: 2,
 	biomeBranch: "main",
@@ -21,6 +27,21 @@ const manifest = {
 	status: "completed",
 	startedAt: "2026-09-03T10:00:00.000Z",
 	completedAt: "2026-09-03T10:05:00.000Z",
+	targets: {
+		"withastro/astro": {
+			repositoryCommitSha: "b".repeat(40),
+			jobStartedAt: "2026-09-03T10:01:00.000Z",
+			jobCompletedAt: "2026-09-03T10:02:00.000Z",
+			migrationOutcome: "succeeded_no_changes",
+			executionStatus: "completed",
+			timingSamples,
+		},
+	},
+} as const;
+
+const legacyManifest = {
+	...manifest,
+	schemaVersion: 1,
 	targets: {
 		"withastro/astro": {
 			repositoryCommitSha: "b".repeat(40),
@@ -47,6 +68,10 @@ const rawReport = {
 };
 
 describe("run manifest ingestion", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
 	test("accepts only authenticated, valid attempt uploads", async () => {
 		const objects = new Map<string, ArrayBuffer>();
 		const bucket = {
@@ -97,6 +122,18 @@ describe("run manifest ingestion", () => {
 
 	test("parses manifests keyed by full repository slug", () => {
 		expect(parseRunManifest(manifest)).toEqual(manifest);
+		expect(parseRunManifest(legacyManifest)).toEqual(legacyManifest);
+		expect(() =>
+			parseRunManifest({
+				...manifest,
+				targets: {
+					"withastro/astro": {
+						...manifest.targets["withastro/astro"],
+						timingSamples: [timingSamples[0], timingSamples[0]],
+					},
+				},
+			}),
+		).toThrow("Timing sample ordinals must be unique");
 		expect(() =>
 			parseRunManifest({ ...manifest, targets: { astro: {} } }),
 		).toThrow();
@@ -149,8 +186,22 @@ describe("run manifest ingestion", () => {
 		expect(summary.report).toMatchObject({
 			checkOutcome: "failed",
 			jobDurationMs: 60_000,
-			checkDurationNs: 300,
 		});
+		expect(summary.report).not.toHaveProperty("checkDurationNs");
+		expect(summary.samples).toEqual([
+			{
+				repositorySlug: "withastro/astro",
+				ordinal: 1,
+				checkDurationNs: 320,
+				scannerDurationNs: 210,
+			},
+			{
+				repositorySlug: "withastro/astro",
+				ordinal: 2,
+				checkDurationNs: 300,
+				scannerDurationNs: 200,
+			},
+		]);
 		expect(summary.diagnostics).toEqual([
 			{
 				repositorySlug: "withastro/astro",
@@ -174,6 +225,51 @@ describe("run manifest ingestion", () => {
 				summary: { ...rawReport.summary, errors: -1 },
 			}),
 		).toBeNull();
+	});
+
+	test("uses the report summary as the single sample without manifest samples", () => {
+		const report = parseRawReport(rawReport);
+		if (!report) throw new Error("Expected the report fixture to be valid");
+		const target = parseRunManifest(legacyManifest).targets["withastro/astro"];
+		expect(timingSamplesFor("withastro/astro", target, report)).toEqual([
+			{ ordinal: 1, checkDurationNs: 300, scannerDurationNs: 200 },
+		]);
+		expect(
+			timingSamplesFor(
+				"withastro/astro",
+				{ ...target, timingSamples: [] },
+				report,
+			),
+		).toEqual([{ ordinal: 1, checkDurationNs: 300, scannerDurationNs: 200 }]);
+	});
+
+	test("orders manifest samples by ordinal and warns when the report is not among them", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const report = parseRawReport(rawReport);
+		if (!report) throw new Error("Expected the report fixture to be valid");
+		const target = parseRunManifest(manifest).targets["withastro/astro"];
+		expect(
+			timingSamplesFor(
+				"withastro/astro",
+				{ ...target, timingSamples: [timingSamples[1], timingSamples[0]] },
+				report,
+			).map((sample) => sample.ordinal),
+		).toEqual([1, 2]);
+		expect(warn).not.toHaveBeenCalled();
+
+		timingSamplesFor(
+			"withastro/astro",
+			{
+				...target,
+				timingSamples: [
+					{ ordinal: 1, checkDurationNs: 999, scannerDurationNs: 999 },
+				],
+			},
+			report,
+		);
+		expect(warn).toHaveBeenCalledWith(
+			expect.stringContaining("withastro/astro"),
+		);
 	});
 
 	test("validates R2 event notification bodies", () => {
@@ -256,7 +352,14 @@ describe("run manifest ingestion", () => {
 			reportCount: 1,
 		});
 		expect(batches).toHaveLength(1);
-		expect(batches[0]).toHaveLength(4);
+		expect(batches[0]).toHaveLength(5);
+		const [, , insertResults, insertSamples] = batches[0] as Array<{
+			query: string;
+			values: unknown[];
+		}>;
+		expect(insertResults.query).not.toContain("check_duration_ns");
+		expect(insertSamples.query).toContain("INSERT INTO check_samples");
+		expect(JSON.parse(insertSamples.values[0] as string)).toHaveLength(2);
 		expect(objects.has(incomingKey)).toBe(false);
 		expect(objects.get("runs/123/attempts/2/manifest.json")).toBe(
 			JSON.stringify(manifest),
