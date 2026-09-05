@@ -23,6 +23,9 @@ ci: lint test check build
 dev *args:
 	pnpm --dir dashboard exec vite dev --host {{args}}
 
+reports-download *args:
+	pnpm --dir dashboard exec tsx scripts/download-r2.ts {{args}}
+
 reports-import *args:
 	pnpm --dir dashboard exec tsx scripts/import-ci-runs.ts {{args}}
 

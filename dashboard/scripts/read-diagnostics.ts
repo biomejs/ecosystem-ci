@@ -2,7 +2,9 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { latestLocalRuns, loadLocalRuns } from "./local-reports.js";
 
 interface Position {
 	line?: number;
@@ -55,7 +57,6 @@ export interface DiagnosticFilters {
 }
 
 const dataDirectory = new URL("../data/", import.meta.url);
-const manifestUrl = new URL("manifest.json", dataDirectory);
 
 function reportId(reportPath: string): string {
 	return path
@@ -190,7 +191,7 @@ export function formatDiagnostic(
 function showHelp(): void {
 	console.info(`Usage: just reports-diagnostics <repository> [options]
 
-Read diagnostics from dashboard/data/reports. The newest run is used by default.
+Read diagnostics from dashboard/data/runs. The newest run is used by default.
 
 Arguments:
   <repository>              Report id such as astro, or a slug such as withastro/astro
@@ -225,7 +226,10 @@ function parseLimit(value: string | undefined, all: boolean): number {
 	return limit;
 }
 
-export async function main(args = process.argv.slice(2)): Promise<void> {
+export async function main(
+	args = process.argv.slice(2),
+	root = fileURLToPath(dataDirectory),
+): Promise<void> {
 	const { values, positionals } = parseArgs({
 		args,
 		allowPositionals: true,
@@ -258,14 +262,25 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 	}
 
 	const limit = parseLimit(values.limit, values.all);
-	const manifest = JSON.parse(await readFile(manifestUrl, "utf8")) as Manifest;
+	const manifest: Manifest = {
+		runs: latestLocalRuns(await loadLocalRuns(path.join(root, "runs"))).map(
+			({ manifest, reports }) => ({
+				githubRunId: manifest.githubRunId,
+				startedAt: manifest.startedAt,
+				results: reports.map((report) => ({
+					repositorySlug: report.repositorySlug,
+					report: report.key,
+				})),
+			}),
+		),
+	};
 	const selected = selectReport(manifest, repository, values.run);
 	if (!selected) {
 		const run = values.run ? ` in run ${values.run}` : "";
 		throw new Error(`No report found for ${repository}${run}`);
 	}
 
-	const reportUrl = new URL(selected.result.report, dataDirectory);
+	const reportUrl = path.join(root, selected.result.report);
 	const report = JSON.parse(await readFile(reportUrl, "utf8")) as Report;
 	if (report.error) {
 		throw new Error(`The report for ${repository} is an error placeholder`);

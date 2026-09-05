@@ -4,11 +4,11 @@ import { test } from "vitest";
 import {
 	isValidReport,
 	type ManifestRun,
-	mergeRuns,
 	parseArguments,
 	parseReportArtifactName,
 	parseWorkflowTargets,
 	selectUnimportedRunIds,
+	toRunManifest,
 } from "../dashboard/scripts/import-ci-runs.ts";
 
 function run(id: number, startedAt: string): ManifestRun {
@@ -118,13 +118,37 @@ test("parseReportArtifactName accepts main and candidate reports", () => {
 	assert.equal(parseReportArtifactName("outcome-astro"), null);
 });
 
-test("mergeRuns replaces matching IDs and sorts newest first", () => {
+test("GitHub imports produce the production run format", () => {
+	const imported = run(123, "2026-08-20T00:00:00Z");
+	imported.runAttempt = 2;
+	imported.results = [
+		{
+			repositorySlug: "withastro/astro",
+			repositoryCommitSha: "b".repeat(40),
+			jobStartedAt: imported.startedAt,
+			jobCompletedAt: imported.completedAt,
+			report: "runs/123/attempts/2/reports/withastro/astro.json",
+			timingSamples: [
+				{ ordinal: 1, checkDurationNs: 10, scannerDurationNs: 2 },
+			],
+		},
+	];
+	const manifest = toRunManifest(imported);
+	assert.equal(manifest.runAttempt, 2);
+	assert.equal(
+		manifest.targets["withastro/astro"].repositoryCommitSha,
+		"b".repeat(40),
+	);
 	assert.deepEqual(
-		mergeRuns(
-			[run(1, "2026-08-20T00:00:00Z"), run(2, "2026-08-21T00:00:00Z")],
-			[run(1, "2026-08-22T00:00:00Z")],
-		).map((item) => item.githubRunId),
-		[1, 2],
+		manifest.targets["withastro/astro"].timingSamples,
+		imported.results[0].timingSamples,
+	);
+	assert.equal("results" in manifest, false);
+	assert.equal(manifest.targets["withastro/astro"].migrationOutcome, null);
+	imported.results[0].migrationOutcome = "succeeded_with_changes";
+	assert.equal(
+		toRunManifest(imported).targets["withastro/astro"].migrationOutcome,
+		"succeeded_with_changes",
 	);
 });
 

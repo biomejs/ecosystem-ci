@@ -47,12 +47,15 @@ export const ManifestTargetSchema = z
 		jobCompletedAt: TimestampSchema,
 		/** one sample per repetition of the check; absent in schema version 1 */
 		timingSamples: TimingSamplesSchema.optional(),
-		migrationOutcome: z.enum([
-			"not_run",
-			"failed",
-			"succeeded_no_changes",
-			"succeeded_with_changes",
-		]),
+		// Historical GitHub report artifacts may not record a migration outcome.
+		migrationOutcome: z
+			.enum([
+				"not_run",
+				"failed",
+				"succeeded_no_changes",
+				"succeeded_with_changes",
+			])
+			.nullable(),
 		executionStatus: z.enum([
 			"pending",
 			"completed",

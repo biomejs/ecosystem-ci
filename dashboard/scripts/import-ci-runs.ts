@@ -5,13 +5,24 @@ import {
 	mkdtemp,
 	readdir,
 	readFile,
-	rename,
 	rm,
 	writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+	RepositorySlugSchema,
+	type RunManifest,
+	RunManifestSchema,
+} from "@biomejs/ecosystem-ci-ingest/schemas";
+import {
+	installRunDirectory,
+	latestLocalRuns,
+	loadLocalRuns,
+	runsDirectory,
+} from "./local-reports.js";
+import { parseTargetArtifacts, type TargetArtifact } from "./publish-run.js";
 
 const DEFAULT_REPOSITORY = "biomejs/ecosystem-ci";
 const DEFAULT_WORKFLOW = "ecosystem-ci.yml";
@@ -25,8 +36,6 @@ let githubToken: string | undefined;
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const dashboardDirectory = resolve(scriptDirectory, "..");
 const repositoryDirectory = resolve(dashboardDirectory, "..");
-const manifestPath = join(dashboardDirectory, "data", "manifest.json");
-const reportsDirectory = join(dashboardDirectory, "data", "reports");
 
 function sleep(milliseconds: number): Promise<void> {
 	return new Promise((resolvePromise) => {
@@ -49,6 +58,8 @@ export interface WorkflowTarget {
 }
 
 interface ManifestResult {
+	migrationOutcome?: RunManifest["targets"][string]["migrationOutcome"];
+	executionStatus?: RunManifest["targets"][string]["executionStatus"];
 	repositorySlug: string;
 	repositoryCommitSha: string;
 	jobStartedAt: string;
@@ -71,11 +82,6 @@ export interface ManifestRun {
 	completedAt: string;
 	status: "completed";
 	results: ManifestResult[];
-}
-
-export interface Manifest {
-	workflow: string;
-	runs: ManifestRun[];
 }
 
 interface GitHubRun {
@@ -282,17 +288,6 @@ export function parseReportArtifactName(
 	return null;
 }
 
-export function mergeRuns(
-	existing: ManifestRun[],
-	imported: ManifestRun[],
-): ManifestRun[] {
-	const byId = new Map(existing.map((run) => [run.githubRunId, run]));
-	for (const run of imported) byId.set(run.githubRunId, run);
-	return [...byId.values()].sort((left, right) =>
-		right.startedAt.localeCompare(left.startedAt),
-	);
-}
-
 export function selectUnimportedRunIds(
 	runs: GitHubRun[],
 	existingAttempts: Map<number, number>,
@@ -345,6 +340,20 @@ async function githubJson<T>(path: string): Promise<T> {
 		await sleep(Math.max(1, retryAfter) * 1000);
 	}
 	throw new Error("Unreachable");
+}
+
+export async function githubCollection<T>(
+	path: string,
+	field: string,
+): Promise<T[]> {
+	const items: T[] = [];
+	for (let page = 1; ; page++) {
+		const response = await githubJson<Record<string, T[]>>(
+			`${path}?per_page=100&page=${page}`,
+		);
+		items.push(...response[field]);
+		if (response[field].length < 100) return items;
+	}
 }
 
 function localWorkflowPath(workflow: string): string | null {
@@ -659,14 +668,16 @@ async function prepareRun(
 	resolver: CommitResolver,
 	stagingDirectories: Set<string>,
 ): Promise<PreparedRun | null> {
-	console.log(`Inspecting run ${runId}...`);
-	const [run, jobsResponse, artifactsResponse] = await Promise.all([
+	console.info(`Inspecting run ${runId}...`);
+	const [run, runJobs, runArtifacts] = await Promise.all([
 		githubJson<GitHubRun>(`/repos/${options.repository}/actions/runs/${runId}`),
-		githubJson<{ jobs: GitHubJob[] }>(
-			`/repos/${options.repository}/actions/runs/${runId}/jobs?per_page=100`,
+		githubCollection<GitHubJob>(
+			`/repos/${options.repository}/actions/runs/${runId}/jobs`,
+			"jobs",
 		),
-		githubJson<{ artifacts: GitHubArtifact[] }>(
-			`/repos/${options.repository}/actions/runs/${runId}/artifacts?per_page=100`,
+		githubCollection<GitHubArtifact>(
+			`/repos/${options.repository}/actions/runs/${runId}/artifacts`,
+			"artifacts",
 		),
 	]);
 
@@ -677,7 +688,7 @@ async function prepareRun(
 	}
 
 	const artifactsById = new Map<string, ReportArtifact>();
-	for (const artifact of artifactsResponse.artifacts) {
+	for (const artifact of runArtifacts) {
 		if (artifact.expired) continue;
 		const parsed = parseReportArtifactName(artifact.name);
 		if (!parsed) continue;
@@ -688,13 +699,14 @@ async function prepareRun(
 	}
 	const artifacts = [...artifactsById.values()];
 	if (artifacts.length === 0) {
-		console.log(`Skipping run ${runId}: no retained report artifacts.`);
+		console.info(`Skipping run ${runId}: no retained report artifacts.`);
 		return null;
 	}
 
 	const targetById = new Map(targets.map((target) => [target.id, target]));
+	const metadataById = new Map<string, TargetArtifact>();
 	const stagingDirectory = join(
-		reportsDirectory,
+		runsDirectory,
 		`.import-${runId}-${process.pid}-${Date.now()}`,
 	);
 	await mkdir(stagingDirectory, { recursive: true });
@@ -722,12 +734,56 @@ async function prepareRun(
 				throw new Error(`${filename} was not present in ${artifact.name}`);
 			const report = JSON.parse(await readFile(source, "utf8")) as Report;
 			if (!isValidReport(report)) {
-				console.log(
+				console.info(
 					`Ignoring ${artifact.name}: CI did not produce a valid report.`,
 				);
 				return null;
 			}
-			await copyFile(source, join(stagingDirectory, filename));
+			const destination = join(
+				stagingDirectory,
+				"reports",
+				`${RepositorySlugSchema.parse(target.repository)}.json`,
+			);
+			await mkdir(dirname(destination), { recursive: true });
+			await copyFile(source, destination);
+			const metadataArtifact = runArtifacts.find(
+				(item) => item.name === `target-metadata-${id}` && !item.expired,
+			);
+			if (metadataArtifact) {
+				const metadataZip = join(
+					temporaryDirectory,
+					`metadata-${runId}-${index}.zip`,
+				);
+				const metadataDirectory = join(
+					temporaryDirectory,
+					`metadata-${runId}-${index}`,
+				);
+				await mkdir(metadataDirectory, { recursive: true });
+				await downloadArtifact(
+					options.repository,
+					runId,
+					metadataArtifact,
+					metadataZip,
+				);
+				await runCommand([
+					"unzip",
+					"-oq",
+					metadataZip,
+					"-d",
+					metadataDirectory,
+				]);
+				const metadataPath = await findFile(
+					metadataDirectory,
+					`target-metadata-${id}.json`,
+				);
+				if (!metadataPath) throw new Error(`Missing target metadata for ${id}`);
+				const [metadata] = parseTargetArtifacts([
+					JSON.parse(await readFile(metadataPath, "utf8")),
+				]);
+				if (metadata.id !== id || metadata.repositorySlug !== target.repository)
+					throw new Error(`Target metadata identity mismatch for ${id}`);
+				metadataById.set(id, metadata);
+			}
 			return target;
 		},
 	);
@@ -743,14 +799,12 @@ async function prepareRun(
 	if (validTargets.length === 0) {
 		await rm(stagingDirectory, { recursive: true, force: true });
 		stagingDirectories.delete(stagingDirectory);
-		console.log(`Skipping run ${runId}: every report artifact was invalid.`);
+		console.info(`Skipping run ${runId}: every report artifact was invalid.`);
 		return null;
 	}
 
-	const jobs = new Map(jobsResponse.jobs.map((job) => [job.name, job]));
-	const buildJob = jobsResponse.jobs.find((job) =>
-		job.name.startsWith("Build Biome ("),
-	);
+	const jobs = new Map(runJobs.map((job) => [job.name, job]));
+	const buildJob = runJobs.find((job) => job.name.startsWith("Build Biome ("));
 	if (!buildJob) throw new Error(`Run ${runId} has no Build Biome job`);
 	const branch = buildJob.name.match(/^Build Biome \((.+)\)$/)?.[1];
 	if (!branch)
@@ -762,6 +816,12 @@ async function prepareRun(
 		buildJob.started_at,
 	);
 	const results = await mapLimit(validTargets, 6, async (target) => {
+		const metadata = metadataById.get(target.id);
+		if (metadata)
+			return {
+				...metadata,
+				report: `runs/${runId}/attempts/${run.run_attempt}/reports/${target.repository}.json`,
+			};
 		const job = jobs.get(`Test ${target.id}`);
 		if (!job?.completed_at) {
 			throw new Error(`Run ${runId} has no completed Test ${target.id} job`);
@@ -776,7 +836,7 @@ async function prepareRun(
 			repositoryCommitSha,
 			jobStartedAt: job.started_at,
 			jobCompletedAt: job.completed_at,
-			report: `reports/${runId}/${REPORT_PREFIX}${target.id}.json`,
+			report: `runs/${runId}/attempts/${run.run_attempt}/reports/${target.repository}.json`,
 		};
 	});
 
@@ -799,7 +859,7 @@ async function discoverRunIds(
 	options: ImportOptions,
 	existingAttempts: Map<number, number>,
 ): Promise<number[]> {
-	console.log(`Finding completed runs for ${options.workflow}...`);
+	console.info(`Finding completed runs for ${options.workflow}...`);
 	const workflow = encodeURIComponent(options.workflow);
 	const cutoff = new Date(
 		Date.now() - REPORT_RETENTION_DAYS * 24 * 60 * 60 * 1000,
@@ -819,77 +879,59 @@ async function discoverRunIds(
 	);
 }
 
+export function toRunManifest(run: ManifestRun): RunManifest {
+	return RunManifestSchema.parse({
+		schemaVersion: 2,
+		githubRunId: run.githubRunId,
+		runAttempt: run.runAttempt,
+		biomeBranch: run.biomeBranch,
+		biomeCommitSha: run.biomeCommitSha,
+		startedAt: run.startedAt,
+		completedAt: run.completedAt,
+		status: run.status,
+		targets: Object.fromEntries(
+			run.results.map((result) => [
+				result.repositorySlug,
+				{
+					repositoryCommitSha: result.repositoryCommitSha,
+					jobStartedAt: result.jobStartedAt,
+					jobCompletedAt: result.jobCompletedAt,
+					migrationOutcome: result.migrationOutcome ?? null,
+					executionStatus: result.executionStatus ?? "completed",
+					timingSamples: result.timingSamples,
+				},
+			]),
+		),
+	});
+}
+
 async function installPreparedReports(
 	prepared: PreparedRun[],
 	stagingDirectories: Set<string>,
 ): Promise<void> {
 	for (const item of prepared) {
-		const runId = item.run.githubRunId;
-		if (!Number.isSafeInteger(runId) || runId <= 0) {
-			throw new Error(`Refusing unsafe report directory for run ID ${runId}`);
-		}
-		const finalDirectory = join(reportsDirectory, String(runId));
-		await rm(finalDirectory, { recursive: true, force: true });
-		await rename(item.stagingDirectory, finalDirectory);
+		const manifest = toRunManifest(item.run);
+		await writeFile(
+			join(item.stagingDirectory, "manifest.json"),
+			`${JSON.stringify(manifest, null, "\t")}\n`,
+		);
+		await installRunDirectory(item.stagingDirectory, manifest);
 		stagingDirectories.delete(item.stagingDirectory);
 	}
 }
 
-async function removeStaleStagingDirectories(): Promise<void> {
-	await mkdir(reportsDirectory, { recursive: true });
-	for (const entry of await readdir(reportsDirectory, {
-		withFileTypes: true,
-	})) {
-		if (entry.isDirectory() && entry.name.startsWith(".import-")) {
-			await rm(join(reportsDirectory, entry.name), {
-				recursive: true,
-				force: true,
-			});
-		}
-	}
-}
-
-async function writeManifest(manifest: Manifest): Promise<void> {
-	await mkdir(dirname(manifestPath), { recursive: true });
-	const temporaryManifest = `${manifestPath}.tmp-${process.pid}`;
-	await writeFile(
-		temporaryManifest,
-		`${JSON.stringify(manifest, null, "\t")}\n`,
-	);
-	await rename(temporaryManifest, manifestPath);
-}
-
-export async function loadManifest(
-	fallbackWorkflow: string,
-	readText: () => Promise<string> = () => readFile(manifestPath, "utf8"),
-): Promise<Manifest> {
-	try {
-		return JSON.parse(await readText()) as Manifest;
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-		return { workflow: fallbackWorkflow, runs: [] };
-	}
-}
-
-function manifestWorkflow(options: ImportOptions): string {
-	const workflowPath = localWorkflowPath(options.workflow);
-	return workflowPath
-		? `${options.repository}/${workflowPath}`
-		: `${options.repository}/actions/workflows/${options.workflow}`;
-}
-
 function printHelp(): void {
-	console.log(`Usage:
+	console.info(`Usage:
   just reports-import
   just reports-import 33193506807 32934641625
 
-With no run IDs, the importer finds completed runs from the last ${REPORT_RETENTION_DAYS} days that are not in the manifest.
+With no run IDs, the importer finds completed runs from the last ${REPORT_RETENTION_DAYS} days that have not been downloaded.
 
 Options:
   --workflow <file-or-id>  Workflow used for discovery. Default: ${DEFAULT_WORKFLOW}
   --repository <owner/repo>  Actions repository. Default: ${DEFAULT_REPOSITORY}
-  --no-seed                Update reports and manifest without reseeding local D1/R2
-  --seed                   Reseed local D1/R2 after import. This is the default
+  --no-seed                Download run folders without seeding local D1/R2
+  --seed                   Migrate and seed local D1/R2 after import. This is the default
   -h, --help               Show this help
 
 Authentication: GITHUB_TOKEN, GH_TOKEN, or the active gh login.`);
@@ -903,14 +945,16 @@ async function main(): Promise<void> {
 	}
 	githubToken = await resolveGitHubToken();
 
-	const [manifest, workflow] = await Promise.all([
-		loadManifest(manifestWorkflow(options)),
+	const [localRuns, workflow] = await Promise.all([
+		loadLocalRuns(),
 		loadWorkflowDefinition(options),
 	]);
 	const targets = parseWorkflowTargets(workflow);
-	await removeStaleStagingDirectories();
 	const existingAttempts = new Map(
-		manifest.runs.map((run) => [run.githubRunId, run.runAttempt]),
+		latestLocalRuns(localRuns).map(({ manifest }) => [
+			manifest.githubRunId,
+			manifest.runAttempt,
+		]),
 	);
 	const explicitRunIds = options.runIds.length > 0;
 	const runIds = explicitRunIds
@@ -918,7 +962,13 @@ async function main(): Promise<void> {
 		: await discoverRunIds(options, existingAttempts);
 
 	if (runIds.length === 0) {
-		console.log("No new retained runs to import.");
+		console.info("No new retained runs to import.");
+		if (options.seed && localRuns.length > 0) {
+			await runCommand(["pnpm", "run", "db:setup:local"], {
+				cwd: dashboardDirectory,
+				inherit: true,
+			});
+		}
 		return;
 	}
 
@@ -945,28 +995,23 @@ async function main(): Promise<void> {
 			if (explicitRunIds) {
 				throw new Error("The requested runs had no retained valid reports");
 			}
-			console.log("No new retained runs to import.");
+			console.info("No new retained runs to import.");
 			return;
 		}
 
 		await installPreparedReports(prepared, stagingDirectories);
-		manifest.runs = mergeRuns(
-			manifest.runs,
-			prepared.map((item) => item.run),
-		);
-		await writeManifest(manifest);
 
 		const resultCount = prepared.reduce(
 			(total, item) => total + item.run.results.length,
 			0,
 		);
-		console.log(
+		console.info(
 			`Imported ${prepared.length} ${prepared.length === 1 ? "run" : "runs"} with ${resultCount} reports.`,
 		);
 
 		if (options.seed) {
-			console.log("Reseeding local D1 and R2...");
-			await runCommand(["pnpm", "run", "db:seed:local"], {
+			console.info("Reseeding local D1 and R2...");
+			await runCommand(["pnpm", "run", "db:setup:local"], {
 				cwd: dashboardDirectory,
 				inherit: true,
 			});
