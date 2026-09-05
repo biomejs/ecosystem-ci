@@ -1,0 +1,12 @@
+diff --git a/frontend/apps/docs/biome.jsonc b/frontend/apps/docs/biome.jsonc
+index 8adaec2..0a69973 100644
+--- a/frontend/apps/docs/biome.jsonc
++++ b/frontend/apps/docs/biome.jsonc
+@@ -8,6 +8,7 @@
+       },
+       "style": {
+         "noRestrictedImports": {
++          "level": "error",
+           "options": {
+             "paths": {
+               "fumadocs-ui/components/tabs": "Use '@/components' instead.",

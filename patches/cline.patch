@@ -1,0 +1,11 @@
+diff --git a/apps/vscode/biome.jsonc b/apps/vscode/biome.jsonc
+index a1abdd8..fef0339 100644
+--- a/apps/vscode/biome.jsonc
++++ b/apps/vscode/biome.jsonc
+@@ -1,5 +1,5 @@
+ {
+-	"root": true,
++	"root": false,
+ 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+ 	"vcs": {
+ 		"enabled": true,
