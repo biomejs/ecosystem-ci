@@ -16,36 +16,38 @@ export interface Metric {
 }
 
 /** the focus metrics — the only coloured things on the page, one hue each */
-export const METRICS: Metric[] = [
-	{
+export const METRIC_BY_KEY: Record<MetricKey, Metric> = {
+	checkMs: {
 		key: "checkMs",
 		label: "Check time",
 		hue: "var(--color-blue)",
 		format: formatMs,
 		zeroBased: false,
 	},
-	{
+	scannerMs: {
 		key: "scannerMs",
 		label: "Scanner time",
 		hue: "var(--color-violet)",
 		format: formatMs,
 		zeroBased: false,
 	},
-	{
+	parse: {
 		key: "parse",
 		label: "Parse diagnostics",
 		hue: "var(--color-aqua)",
 		format: formatCount,
 		zeroBased: true,
 	},
-	{
+	panics: {
 		key: "panics",
 		label: "Panics",
 		hue: "var(--color-orange)",
 		format: formatCount,
 		zeroBased: true,
 	},
-];
+};
+
+export const METRICS: Metric[] = Object.values(METRIC_BY_KEY);
 
 /** secondary metric: rule diagnostics by severity, monochrome on purpose. Order = stack order (bottom first). */
 export const SEVERITIES: Metric[] = [
@@ -200,13 +202,12 @@ export const seriesRanges = (
 		s === null ? null : [s.min, s.max],
 	);
 
-/** "1.15 s–1.31 s · 5 samples", or just the count when the range is flat at display precision */
-export function formatSampleSummary(s: TimingStats): string {
-	const noun = s.count === 1 ? "sample" : "samples";
+/** Duration range, or one duration when both ends round to the same value. */
+export function formatTimingRange(s: TimingStats): string {
 	const low = formatMs(s.min);
 	const high = formatMs(s.max);
-	if (s.count === 1 || low === high) return `${s.count} ${noun}`;
-	return `${low}–${high} · ${s.count} ${noun}`;
+	if (low === high) return low;
+	return `${low}–${high}`;
 }
 
 export function lastDefined(

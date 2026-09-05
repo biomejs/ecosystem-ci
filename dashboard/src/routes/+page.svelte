@@ -4,9 +4,10 @@ import type { TimingStats } from "$lib/timing";
 import {
 	buildDataset,
 	formatDeltaShort,
-	formatSampleSummary,
+	formatTimingRange,
 	isTime,
 	lastDefined,
+	METRIC_BY_KEY,
 	METRICS,
 	type Metric,
 	type Repo,
@@ -109,23 +110,23 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 		>
 			{#if last && f}
 				<div class="font-semibold">{m.format(last.value)}</div>
-				<div class="text-compact font-semibold" style:color={deltaColor(f)}>
+				<div class="text-sm font-semibold" style:color={deltaColor(f)}>
 					{deltaGlyph(f)} {formatDeltaShort(f.after, f.before, m.key)}
 				</div>
-				<div class="text-muted text-micro">
+				<div class="text-muted text-xs">
 					{f.kind === "spike" ? "latest run only" : `since ${formatDay(runs[f.at].startedAt)}`}
 				</div>
 			{:else if last}
 				<div class="font-semibold">{m.format(last.value)}</div>
-				<div class="text-muted text-compact">
+				<div class="text-muted text-sm">
 					{prev ? formatDeltaShort(last.value, prev.value, m.key) : ""}
 				</div>
 			{:else}
 				<div class="text-muted">—</div>
 			{/if}
 			{#if lastStats}
-				<div class="text-muted text-micro">
-					{formatSampleSummary(lastStats)}
+				<div class="text-muted text-xs">
+					{formatTimingRange(lastStats)}
 				</div>
 			{/if}
 		</div>
@@ -138,12 +139,12 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				<div class="font-semibold">
 					{hv === null || hv === undefined ? "—" : m.format(hv)}
 				</div>
-				<div class="text-muted text-compact">
+				<div class="text-muted text-sm">
 					{hv === null ? "no report" : formatDay(runs[hover.index].startedAt)}
 				</div>
 				{#if hoverStats}
-					<div class="text-muted text-micro">
-						{formatSampleSummary(hoverStats)}
+					<div class="text-muted text-xs">
+						{formatTimingRange(hoverStats)}
 					</div>
 				{/if}
 			{/if}
@@ -151,7 +152,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 	</div>
 {/snippet}
 
-<main class="mx-auto max-w-dashboard px-6 py-5">
+<main class="w-full px-6 py-5">
 	{#if runs.length === 0}
 		<h1 class="text-lg font-semibold">Ecosystem CI trends</h1>
 		<p class="border border-hair bg-surface mt-3 p-4">
@@ -222,18 +223,18 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				{runs}
 				repos={dataset.repos}
 				metric="checkMs"
-				title="Check time across repositories"
-				hue="var(--color-blue)"
-				format={METRICS[0].format}
+				title={`${METRIC_BY_KEY.checkMs.label} across repositories`}
+				hue={METRIC_BY_KEY.checkMs.hue}
+				format={METRIC_BY_KEY.checkMs.format}
 				minimumAbsoluteSpan={10}
 			/>
 			<OverviewLines
 				{runs}
 				repos={dataset.repos}
 				metric="scannerMs"
-				title="Scanner time across repositories"
-				hue="var(--color-violet)"
-				format={METRICS[1].format}
+				title={`${METRIC_BY_KEY.scannerMs.label} across repositories`}
+				hue={METRIC_BY_KEY.scannerMs.hue}
+				format={METRIC_BY_KEY.scannerMs.format}
 				minimumAbsoluteSpan={10}
 			/>
 		</div>
@@ -276,8 +277,8 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 					<div class="border-hair border-b border-l px-3 py-2">
 						<div class="flex items-center gap-2">
 							<span class="key" style:background={m.hue}></span>
-							<span class="font-semibold">{m.label}</span>
-							<span class="text-muted ml-auto whitespace-nowrap text-compact"
+							<span class="whitespace-nowrap font-semibold">{m.label}</span>
+							<span class="text-muted ml-auto whitespace-nowrap text-sm"
 								>{hovered ? "at run" : "latest · Δ"}</span
 							>
 						</div>
@@ -289,7 +290,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 						title={SEVERITY_NOTE}
 					>
 						<span class="font-semibold">By severity</span>
-						<span class="ml-auto flex gap-1.5 text-compact text-ink-2">
+						<span class="ml-auto flex gap-1.5 text-sm text-ink-2">
 							{#each [...SEVERITIES].reverse() as s (s.key)}
 								<span class="inline-flex items-center gap-1"
 									><span
@@ -317,9 +318,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 							>{repo.slug}</a
 						>
 						{#if repo.cells[repo.cells.length - 1]?.missing}
-							<span class="text-muted text-compact"
-								>no report in latest run</span
-							>
+							<span class="text-muted text-sm">no report in latest run</span>
 						{/if}
 					</div>
 					{#each METRICS as m (m.key)}
@@ -341,7 +340,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 								minimumSpan={isTime(m.key) ? 10 : null}
 								markers={f ? [f.at] : []}
 								ranges={isTime(m.key) ? seriesRanges(repo, m.key) : []}
-								height={lastRow ? 74 : 60}
+								height={lastRow ? 94 : 80}
 								axis={lastRow ? "dates" : "none"}
 								ariaLabel={`${m.label} for ${repo.slug} over ${runs.length} runs`}
 							/>
@@ -372,7 +371,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 						<StackedArea
 							{runs}
 							layers={SEVERITIES.map((s) => ({ key: s.key, label: s.label, hue: s.hue, values: seriesValues(repo, s.key) }))}
-							height={lastRow ? 74 : 60}
+							height={lastRow ? 94 : 80}
 							axis={lastRow ? "dates" : "none"}
 							ariaLabel={`${SEVERITY_LABEL} for ${repo.slug} over ${runs.length} runs`}
 						/>
@@ -386,7 +385,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 									<div class="font-semibold">
 										{formatCount(totals[latestAt] as number)}
 									</div>
-									<div class="text-muted text-compact">
+									<div class="text-muted text-sm">
 										{latestCell.errors}
 										· {latestCell.warnings} · {latestCell.infos}
 									</div>
@@ -395,14 +394,14 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 								{/if}
 								{#if sevFinding}
 									<div
-										class="text-compact font-semibold"
+										class="text-sm font-semibold"
 										style:color={deltaColor(sevFinding)}
 									>
 										{deltaGlyph(sevFinding)}
 										{formatDeltaShort(sevFinding.after, sevFinding.before, sevFinding.metric.key)}
 										{sevFinding.metric.label.toLowerCase()}
 									</div>
-									<div class="text-muted text-micro">
+									<div class="text-muted text-xs">
 										since {formatDay(runs[sevFinding.at].startedAt)}
 									</div>
 								{/if}
@@ -416,7 +415,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 									<div class="font-semibold">
 										{formatCount(totals[hover.index] as number)}
 									</div>
-									<div class="text-muted text-compact">
+									<div class="text-muted text-sm">
 										{hoverCell.errors}
 										· {hoverCell.warnings} · {hoverCell.infos}
 									</div>

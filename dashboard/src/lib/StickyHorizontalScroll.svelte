@@ -38,20 +38,20 @@ $effect(() => {
 });
 </script>
 
-<div class="scroll-shell" class:has-overflow={overflowing}>
+<div class="relative min-w-0" class:pb-5={overflowing}>
 	{#if overflowing}
 		<div
-			class="scroll-proxy"
+			class="sticky top-scroll-proxy z-30 -mb-5 h-5 overflow-x-auto overflow-y-hidden border border-hair bg-surface scrollbar-thumb-muted scrollbar-track-surface"
 			bind:this={proxy}
 			aria-hidden="true"
 			onscroll={(event) => syncScroll(event.currentTarget, viewport)}
 		>
-			<div class="scroll-proxy-content" style:width={`${contentWidth}px`}></div>
+			<div class="h-px" style:width={`${contentWidth}px`}></div>
 		</div>
 	{/if}
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<section
-		class={`scroll-viewport ${className}`}
+		class={`min-w-0 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden ${className}`}
 		bind:this={viewport}
 		aria-label={label}
 		onscroll={(event) => syncScroll(event.currentTarget, proxy)}
@@ -59,41 +59,3 @@ $effect(() => {
 		{@render children()}
 	</section>
 </div>
-
-<style>
-.scroll-shell {
-	position: relative;
-	min-width: 0;
-}
-
-.scroll-shell.has-overflow {
-	padding-bottom: 1.25rem;
-}
-
-.scroll-proxy {
-	position: sticky;
-	top: calc(100dvh - 1.25rem);
-	z-index: 30;
-	height: 1.25rem;
-	margin-bottom: -1.25rem;
-	overflow-x: auto;
-	overflow-y: hidden;
-	background: var(--color-surface);
-	border: 1px solid var(--color-hair);
-	scrollbar-color: var(--color-muted) var(--color-surface);
-}
-
-.scroll-proxy-content {
-	height: 1px;
-}
-
-.scroll-viewport {
-	min-width: 0;
-	overflow-x: auto;
-	scrollbar-width: none;
-}
-
-.scroll-viewport::-webkit-scrollbar {
-	display: none;
-}
-</style>

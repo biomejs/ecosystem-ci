@@ -2,6 +2,8 @@
 
 /* Dark only. Metric hues validated for contrast and colour-vision deficiency on #121211. */
 @theme static {
+	--font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+
 	--color-page: #121211;
 	--color-surface: #1a1a19;
 	--color-ink: #f2f1ec;
@@ -19,13 +21,11 @@
 	--color-worse: #e66767;
 	--color-better: #2fb344;
 
-	--text-compact: 0.6875rem;
-	--text-compact--line-height: 1rem;
-	--text-micro: 0.625rem;
-	--text-micro--line-height: 0.875rem;
+	/* SVG labels use chart coordinates, independent of the HTML root size. */
+	--text-chart: 10.5px;
+	--text-chart-detail: 8px;
 	--tracking-eyebrow: 0.04em;
 
-	--container-dashboard: 93.75rem;
 	--container-compare: 76rem;
 	--spacing-dashboard-table: 82.5rem;
 
@@ -51,8 +51,9 @@
 		min-height: 100vh;
 		background: var(--color-page);
 		color: var(--color-ink);
-		font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-		font-size: 13px;
+		font-family: var(--font-sans);
+		/* 14px at the default browser size; respects user font preferences. */
+		font-size: 87.5%;
 		line-height: 1.35;
 	}
 
@@ -82,8 +83,8 @@
 
 /* small uppercase label above a control or column */
 @utility eyebrow {
-	font-size: var(--text-compact);
-	line-height: var(--text-compact--line-height);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
 	font-weight: 600;
 	letter-spacing: var(--tracking-eyebrow);
 	text-transform: uppercase;
@@ -97,4 +98,9 @@
 	height: 2px;
 	vertical-align: middle;
 	border-radius: 1px;
+}
+
+/* Keep the sticky scrollbar one h-5 above the viewport bottom. */
+@utility top-scroll-proxy {
+	top: calc(100dvh - --spacing(5));
 }
