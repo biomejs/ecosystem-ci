@@ -14,7 +14,7 @@ interface Layer {
 let {
 	runs,
 	layers,
-	height = 60,
+	height = 80,
 	axis = "none",
 	ariaLabel,
 }: {

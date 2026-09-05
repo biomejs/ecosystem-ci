@@ -340,7 +340,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 								minimumSpan={isTime(m.key) ? 10 : null}
 								markers={f ? [f.at] : []}
 								ranges={isTime(m.key) ? seriesRanges(repo, m.key) : []}
-								height={lastRow ? 74 : 60}
+								height={lastRow ? 94 : 80}
 								axis={lastRow ? "dates" : "none"}
 								ariaLabel={`${m.label} for ${repo.slug} over ${runs.length} runs`}
 							/>
@@ -371,7 +371,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 						<StackedArea
 							{runs}
 							layers={SEVERITIES.map((s) => ({ key: s.key, label: s.label, hue: s.hue, values: seriesValues(repo, s.key) }))}
-							height={lastRow ? 74 : 60}
+							height={lastRow ? 94 : 80}
 							axis={lastRow ? "dates" : "none"}
 							ariaLabel={`${SEVERITY_LABEL} for ${repo.slug} over ${runs.length} runs`}
 						/>

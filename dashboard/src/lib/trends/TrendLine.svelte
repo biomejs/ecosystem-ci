@@ -9,7 +9,7 @@ let {
 	values,
 	hue,
 	zeroBased = false,
-	height = 60,
+	height = 80,
 	axis = "none",
 	baseline = null,
 	softRelativeSpan = null,
