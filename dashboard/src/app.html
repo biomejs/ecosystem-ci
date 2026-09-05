@@ -3,7 +3,41 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<meta name="theme-color" content="#121211">
+		<meta
+			name="theme-color"
+			content="#ffffff"
+			media="(prefers-color-scheme: light)"
+		>
+		<meta
+			name="theme-color"
+			content="#17181c"
+			media="(prefers-color-scheme: dark)"
+		>
+		<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml">
+		<script>
+		(() => {
+			let preference = "system";
+			try {
+				const stored = localStorage.getItem("ecosystem-ci-theme");
+				if (stored === "light" || stored === "dark") preference = stored;
+			} catch {
+				// System theme remains available when storage is blocked.
+			}
+			const theme =
+				preference === "system"
+					? matchMedia("(prefers-color-scheme: dark)").matches
+						? "dark"
+						: "light"
+					: preference;
+			document.documentElement.dataset.theme = theme;
+			document.documentElement.dataset.themePreference = preference;
+			for (const meta of document.querySelectorAll(
+				'meta[name="theme-color"]',
+			)) {
+				meta.setAttribute("content", theme === "dark" ? "#17181c" : "#ffffff");
+			}
+		})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

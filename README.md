@@ -79,7 +79,7 @@ To refresh from R2, download again and run `just db-setup-local`. For GitHub, `j
 Run `just ci` to lint, run unit and browser tests, type-check, and build the project.
 
 Browser tests use Vitest Browser Mode with Playwright Chromium and the dashboard's
-real styles. Install the browser once with
+real styles, including axe accessibility checks in light and dark themes. Install the browser once with
 `pnpm --dir dashboard exec playwright install chromium`, then run
 `pnpm test:browser` or `just test-browser`. On Linux, add `--with-deps` to the
 install command if browser system dependencies are missing. Dashboard CI installs

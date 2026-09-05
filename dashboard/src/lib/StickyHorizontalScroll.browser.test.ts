@@ -24,6 +24,9 @@ async function setup() {
 
 test("horizontal scrolling stays synchronized in both directions", async () => {
 	const { viewport, proxy } = await setup();
+	expect(viewport).toHaveAttribute("tabindex", "0");
+	(viewport as HTMLElement).focus();
+	expect(document.activeElement).toBe(viewport);
 	expect(proxy.scrollWidth).toBe(viewport.scrollWidth);
 
 	// Native scroll events exercise the handlers without dispatching synthetic events.

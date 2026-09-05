@@ -41,21 +41,5 @@
 				"useTailwindShorthandClasses": "error"
 			}
 		}
-	},
-	"overrides": [
-		{
-			"includes": [
-				"dashboard/src/lib/trends/OverviewLines.svelte",
-				"dashboard/src/lib/trends/StackedArea.svelte",
-				"dashboard/src/lib/trends/TrendLine.svelte"
-			],
-			"linter": {
-				"rules": {
-					"a11y": {
-						"noNoninteractiveTabindex": "off"
-					}
-				}
-			}
-		}
-	]
+	}
 }

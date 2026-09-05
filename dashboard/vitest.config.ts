@@ -5,6 +5,7 @@ import viteConfig from "./vite.config.ts";
 export default mergeConfig(
 	viteConfig,
 	defineConfig({
+		optimizeDeps: { include: ["axe-core"] },
 		test: {
 			include: ["src/**/*.browser.test.ts"],
 			browser: {
