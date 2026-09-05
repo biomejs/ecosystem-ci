@@ -668,7 +668,7 @@ async function prepareRun(
 	resolver: CommitResolver,
 	stagingDirectories: Set<string>,
 ): Promise<PreparedRun | null> {
-	console.log(`Inspecting run ${runId}...`);
+	console.info(`Inspecting run ${runId}...`);
 	const [run, runJobs, runArtifacts] = await Promise.all([
 		githubJson<GitHubRun>(`/repos/${options.repository}/actions/runs/${runId}`),
 		githubCollection<GitHubJob>(
@@ -699,7 +699,7 @@ async function prepareRun(
 	}
 	const artifacts = [...artifactsById.values()];
 	if (artifacts.length === 0) {
-		console.log(`Skipping run ${runId}: no retained report artifacts.`);
+		console.info(`Skipping run ${runId}: no retained report artifacts.`);
 		return null;
 	}
 
@@ -734,7 +734,7 @@ async function prepareRun(
 				throw new Error(`${filename} was not present in ${artifact.name}`);
 			const report = JSON.parse(await readFile(source, "utf8")) as Report;
 			if (!isValidReport(report)) {
-				console.log(
+				console.info(
 					`Ignoring ${artifact.name}: CI did not produce a valid report.`,
 				);
 				return null;
@@ -799,7 +799,7 @@ async function prepareRun(
 	if (validTargets.length === 0) {
 		await rm(stagingDirectory, { recursive: true, force: true });
 		stagingDirectories.delete(stagingDirectory);
-		console.log(`Skipping run ${runId}: every report artifact was invalid.`);
+		console.info(`Skipping run ${runId}: every report artifact was invalid.`);
 		return null;
 	}
 
@@ -859,7 +859,7 @@ async function discoverRunIds(
 	options: ImportOptions,
 	existingAttempts: Map<number, number>,
 ): Promise<number[]> {
-	console.log(`Finding completed runs for ${options.workflow}...`);
+	console.info(`Finding completed runs for ${options.workflow}...`);
 	const workflow = encodeURIComponent(options.workflow);
 	const cutoff = new Date(
 		Date.now() - REPORT_RETENTION_DAYS * 24 * 60 * 60 * 1000,
@@ -921,7 +921,7 @@ async function installPreparedReports(
 }
 
 function printHelp(): void {
-	console.log(`Usage:
+	console.info(`Usage:
   just reports-import
   just reports-import 33193506807 32934641625
 
@@ -962,7 +962,7 @@ async function main(): Promise<void> {
 		: await discoverRunIds(options, existingAttempts);
 
 	if (runIds.length === 0) {
-		console.log("No new retained runs to import.");
+		console.info("No new retained runs to import.");
 		if (options.seed && localRuns.length > 0) {
 			await runCommand(["pnpm", "run", "db:setup:local"], {
 				cwd: dashboardDirectory,
@@ -995,7 +995,7 @@ async function main(): Promise<void> {
 			if (explicitRunIds) {
 				throw new Error("The requested runs had no retained valid reports");
 			}
-			console.log("No new retained runs to import.");
+			console.info("No new retained runs to import.");
 			return;
 		}
 
@@ -1005,12 +1005,12 @@ async function main(): Promise<void> {
 			(total, item) => total + item.run.results.length,
 			0,
 		);
-		console.log(
+		console.info(
 			`Imported ${prepared.length} ${prepared.length === 1 ? "run" : "runs"} with ${resultCount} reports.`,
 		);
 
 		if (options.seed) {
-			console.log("Reseeding local D1 and R2...");
+			console.info("Reseeding local D1 and R2...");
 			await runCommand(["pnpm", "run", "db:setup:local"], {
 				cwd: dashboardDirectory,
 				inherit: true,

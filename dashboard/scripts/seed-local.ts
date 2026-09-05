@@ -58,7 +58,7 @@ async function main(): Promise<void> {
 	});
 	try {
 		const reports = await seedLocalRuns(runs, platform.env);
-		console.log(`Seeded ${runs.length} runs and ${reports} reports.`);
+		console.info(`Seeded ${runs.length} runs and ${reports} reports.`);
 	} finally {
 		await platform.dispose();
 	}

@@ -107,7 +107,7 @@ export async function downloadRuns(
 async function main(): Promise<void> {
 	const { runIds, help } = parseDownloadArguments(process.argv.slice(2));
 	if (help) {
-		console.log(`Usage: just reports-download [run-id ...]
+		console.info(`Usage: just reports-download [run-id ...]
 
 Download published run folders from remote R2 into dashboard/data/runs.
 With no IDs, download all published runs. Local files are replaced only after download succeeds.
@@ -118,7 +118,7 @@ Then run just db-setup-local to migrate and seed local D1/R2.`);
 		return;
 	}
 	const count = await downloadRuns(runIds);
-	console.log(
+	console.info(
 		`Downloaded ${count} run attempts into ${dataDirectory}. Run just db-setup-local to seed local D1/R2.`,
 	);
 }

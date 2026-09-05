@@ -18,12 +18,11 @@ The SvelteKit dashboard is a pnpm workspace in [`dashboard/`](dashboard/). Local
 
 ### Local setup
 
-Install Node.js 24, Corepack, `just`, Git, and `unzip`. Run the following commands from the repository root.
+Install Node.js 24, pnpm, `just`, Git, and `unzip`. Run the following commands from the repository root.
 
 1. Install dependencies:
 
    ```sh
-   corepack enable
    pnpm install
    ```
 
