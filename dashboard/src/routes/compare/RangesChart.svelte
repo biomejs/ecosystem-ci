@@ -2,6 +2,7 @@
 <script lang="ts">
 import type { TimingStats } from "$lib/timing";
 import { formatMs } from "$lib/trends/format";
+import { landmarkTooltip } from "./landmark-tooltip";
 import { timingDomain, trackPercent } from "./timing-view";
 
 let {
@@ -46,41 +47,51 @@ const runs = $derived([
 				role="img"
 				aria-label={`${run.name} ${label}: ${formatMs(run.stats.min)} to ${formatMs(run.stats.max)}, median ${formatMs(run.stats.median)}`}
 			>
-				<rect
-					x={x(run.stats.min)}
-					y="4"
-					width={width(run.stats)}
-					height="6"
-					rx="3"
-					fill={run.band}
-					opacity="0.45"
+				<g
+					use:landmarkTooltip={`${run.name} samples ${formatMs(run.stats.min)}–${formatMs(run.stats.max)}`}
 				>
-					<title>
-						{run.name}
-						samples {formatMs(run.stats.min)}–{formatMs(run.stats.max)}
-					</title>
-				</rect>
-				<line
-					x1={x(run.stats.mean)}
-					x2={x(run.stats.mean)}
-					y1="1"
-					y2="13"
-					stroke={run.dot}
-					stroke-width="1"
-					opacity="0.7"
+					<rect
+						x={x(run.stats.min)}
+						y="4"
+						width={width(run.stats)}
+						height="6"
+						rx="3"
+						fill={run.band}
+						opacity="0.45"
+					></rect>
+				</g>
+				<g use:landmarkTooltip={`${run.name} mean ${formatMs(run.stats.mean)}`}>
+					<line
+						x1={x(run.stats.mean)}
+						x2={x(run.stats.mean)}
+						y1="1"
+						y2="13"
+						stroke="transparent"
+						stroke-width="12"
+					/>
+					<line
+						x1={x(run.stats.mean)}
+						x2={x(run.stats.mean)}
+						y1="1"
+						y2="13"
+						stroke={run.dot}
+						stroke-width="1"
+						opacity="0.7"
+					></line>
+				</g>
+				<g
+					use:landmarkTooltip={`${run.name} median ${formatMs(run.stats.median)}`}
 				>
-					<title>{run.name} mean {formatMs(run.stats.mean)}</title>
-				</line>
-				<circle
-					cx={x(run.stats.median)}
-					cy="7"
-					r="4"
-					fill={run.dot}
-					stroke="var(--color-surface)"
-					stroke-width="2"
-				>
-					<title>{run.name} median {formatMs(run.stats.median)}</title>
-				</circle>
+					<circle cx={x(run.stats.median)} cy="7" r="8" fill="transparent" />
+					<circle
+						cx={x(run.stats.median)}
+						cy="7"
+						r="4"
+						fill={run.dot}
+						stroke="var(--color-surface)"
+						stroke-width="2"
+					></circle>
+				</g>
 			</svg>
 			<span>{formatMs(hi)}</span>
 		</div>

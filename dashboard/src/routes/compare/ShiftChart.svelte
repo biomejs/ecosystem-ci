@@ -4,6 +4,7 @@
 import type { TimingStats } from "$lib/timing";
 import { formatMs, formatPct } from "$lib/trends/format";
 import { deltaColor, percentDelta } from "./comparison";
+import { landmarkTooltip } from "./landmark-tooltip";
 import { timingDomain, trackPercent } from "./timing-view";
 
 let {
@@ -47,39 +48,47 @@ const tickAnchor = $derived(
 		role="img"
 		aria-label={`${label}: base samples spread ${formatMs(base.min)} to ${formatMs(base.max)}; ${headTitle}`}
 	>
-		<rect
-			x={`${x(base.min)}%`}
-			y="2"
-			width={`${Math.max(1.5, x(base.max) - x(base.min))}%`}
-			height="18"
-			rx="3"
-			fill="var(--color-muted)"
-			opacity="0.35"
+		<g
+			use:landmarkTooltip={`base samples spread ${formatMs(base.min)}–${formatMs(base.max)}`}
 		>
-			<title>
-				base samples spread {formatMs(base.min)}–{formatMs(base.max)}
-			</title>
-		</rect>
-		<rect
-			x={`${Math.min(x(base.median), x(head.median))}%`}
-			y="6"
-			width={`${Math.max(1, Math.abs(x(head.median) - x(base.median)))}%`}
-			height="10"
-			rx="2"
-			fill={deltaColor(delta)}
-		>
-			<title>{headTitle}</title>
-		</rect>
-		<line
-			x1={`${x(base.median)}%`}
-			x2={`${x(base.median)}%`}
-			y1="0"
-			y2="22"
-			stroke="var(--color-ink)"
-			stroke-width="1.5"
-		>
-			<title>base median {formatMs(base.median)}</title>
-		</line>
+			<rect
+				x={`${x(base.min)}%`}
+				y="2"
+				width={`${Math.max(1.5, x(base.max) - x(base.min))}%`}
+				height="18"
+				rx="3"
+				fill="var(--color-muted)"
+				opacity="0.35"
+			></rect>
+		</g>
+		<g use:landmarkTooltip={`${headTitle}`}>
+			<rect
+				x={`${Math.min(x(base.median), x(head.median))}%`}
+				y="6"
+				width={`${Math.max(1, Math.abs(x(head.median) - x(base.median)))}%`}
+				height="10"
+				rx="2"
+				fill={deltaColor(delta)}
+			></rect>
+		</g>
+		<g use:landmarkTooltip={`base median ${formatMs(base.median)}`}>
+			<line
+				x1={`${x(base.median)}%`}
+				x2={`${x(base.median)}%`}
+				y1="0"
+				y2="22"
+				stroke="transparent"
+				stroke-width="12"
+			/>
+			<line
+				x1={`${x(base.median)}%`}
+				x2={`${x(base.median)}%`}
+				y1="0"
+				y2="22"
+				stroke="var(--color-ink)"
+				stroke-width="1.5"
+			></line>
+		</g>
 		<text
 			x={`${x(base.median)}%`}
 			y="36"
