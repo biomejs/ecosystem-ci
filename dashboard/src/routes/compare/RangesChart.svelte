@@ -3,6 +3,7 @@
 import type { TimingStats } from "$lib/timing";
 import { landmarkTooltip } from "./landmark-tooltip";
 import { formatRulerTime, rangeRuler } from "./range-ruler";
+import TimingRuler from "./TimingRuler.svelte";
 import { timingDomain, trackPercent } from "./timing-view";
 
 let {
@@ -18,12 +19,6 @@ const { lo, hi } = $derived(
 let plotWidth = $state(300);
 const ruler = $derived(rangeRuler(lo, hi, plotWidth));
 const x = (value: number) => `${trackPercent(value, lo, hi)}%`;
-const anchor = (value: number) =>
-	trackPercent(value, lo, hi) < 10
-		? "start"
-		: trackPercent(value, lo, hi) > 90
-			? "end"
-			: "middle";
 const runs = $derived([
 	{ name: "base", stats: base, color: "var(--color-ink-2)", y: 39 },
 	{ name: "head", stats: head, color: hue, y: 67 },
@@ -39,36 +34,9 @@ const runs = $derived([
 			<svg
 				class="h-24 w-full overflow-visible"
 				role="img"
-				aria-label={`${label}: sample ranges from ${formatRulerTime(lo)} to ${formatRulerTime(hi)}; major ticks ${formatRulerTime(ruler.major)}, minor ticks ${formatRulerTime(ruler.minor)}`}
+				aria-label={`${label}: box plots with min/max whiskers from ${formatRulerTime(lo)} to ${formatRulerTime(hi)}; major ticks ${formatRulerTime(ruler.major)}, minor ticks ${formatRulerTime(ruler.minor)}`}
 			>
-				<line x1="0" x2="100%" y1="23" y2="23" stroke="var(--color-base)" />
-				{#each ruler.minorTicks as tick (tick)}
-					<line
-						x1={x(tick)}
-						x2={x(tick)}
-						y1="20"
-						y2="28"
-						stroke="var(--color-muted)"
-					/>
-				{/each}
-				{#each ruler.majorTicks as tick (tick)}
-					<text
-						x={x(tick)}
-						y="12"
-						text-anchor={anchor(tick)}
-						font-size="var(--text-sm)"
-						fill="var(--color-ink-2)"
-					>
-						{formatRulerTime(tick)}
-					</text>
-					<line
-						x1={x(tick)}
-						x2={x(tick)}
-						y1="18"
-						y2="79"
-						stroke="var(--color-base)"
-					/>
-				{/each}
+				<TimingRuler {lo} {hi} {ruler} bottom={79} />
 				{#each runs as run (run.name)}
 					<g
 						use:landmarkTooltip={`${run.name} range ${formatRulerTime(run.stats.min)}–${formatRulerTime(run.stats.max)}`}
@@ -87,7 +55,7 @@ const runs = $derived([
 							y1={run.y}
 							y2={run.y}
 							stroke={run.color}
-							stroke-width="4"
+							stroke-width="1.5"
 						/>
 						<line
 							x1={x(run.stats.min)}
@@ -107,40 +75,43 @@ const runs = $derived([
 						/>
 					</g>
 					<g
-						use:landmarkTooltip={`${run.name} mean ${formatRulerTime(run.stats.mean)}`}
+						use:landmarkTooltip={`${run.name} middle 50%: Q1 ${formatRulerTime(run.stats.q1)}, Q3 ${formatRulerTime(run.stats.q3)}; mean ${formatRulerTime(run.stats.mean)}; ${run.stats.count} samples`}
 					>
-						<line
-							x1={x(run.stats.mean)}
-							x2={x(run.stats.mean)}
-							y1={run.y-6}
-							y2={run.y+6}
-							stroke="transparent"
-							stroke-width="10"
+						<rect
+							x={x(run.stats.q1)}
+							y={run.y-7}
+							width={`${trackPercent(run.stats.q3,lo,hi)-trackPercent(run.stats.q1,lo,hi)}%`}
+							height="14"
+							fill="var(--color-surface)"
 						/>
-						<line
-							x1={x(run.stats.mean)}
-							x2={x(run.stats.mean)}
-							y1={run.y-6}
-							y2={run.y+6}
+						<rect
+							x={x(run.stats.q1)}
+							y={run.y-7}
+							width={`${trackPercent(run.stats.q3,lo,hi)-trackPercent(run.stats.q1,lo,hi)}%`}
+							height="14"
+							fill={run.color}
+							fill-opacity="0.3"
 							stroke={run.color}
-							opacity="0.7"
+							stroke-width="1.5"
 						/>
 					</g>
 					<g
 						use:landmarkTooltip={`${run.name} median ${formatRulerTime(run.stats.median)}`}
 					>
-						<circle
-							cx={x(run.stats.median)}
-							cy={run.y}
-							r="8"
-							fill="transparent"
+						<line
+							x1={x(run.stats.median)}
+							x2={x(run.stats.median)}
+							y1={run.y-8}
+							y2={run.y+8}
+							stroke="transparent"
+							stroke-width="10"
 						/>
-						<circle
-							cx={x(run.stats.median)}
-							cy={run.y}
-							r="4"
-							fill={run.color}
-							stroke="var(--color-surface)"
+						<line
+							x1={x(run.stats.median)}
+							x2={x(run.stats.median)}
+							y1={run.y-7}
+							y2={run.y+7}
+							stroke={run.color}
 							stroke-width="2"
 						/>
 					</g>

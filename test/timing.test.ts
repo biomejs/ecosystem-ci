@@ -17,6 +17,8 @@ describe("timing samples", () => {
 		expect(summarizeSamples([])).toBeNull();
 		expect(summarizeSamples([5])).toEqual({
 			median: 5,
+			q1: 5,
+			q3: 5,
 			min: 5,
 			max: 5,
 			mean: 5,
@@ -24,6 +26,8 @@ describe("timing samples", () => {
 		});
 		expect(summarizeSamples([30, 10, 20, 100])).toEqual({
 			median: 25,
+			q1: 17.5,
+			q3: 47.5,
 			min: 10,
 			max: 100,
 			mean: 40,
@@ -36,9 +40,19 @@ describe("timing samples", () => {
 			{ ordinal: 2, checkDurationNs: 2_000_000, scannerDurationNs: 500_000 },
 			{ ordinal: 1, checkDurationNs: 1_000_000, scannerDurationNs: 250_000 },
 		]);
-		expect(check).toEqual({ median: 1.5, min: 1, max: 2, mean: 1.5, count: 2 });
+		expect(check).toEqual({
+			median: 1.5,
+			q1: 1.25,
+			q3: 1.75,
+			min: 1,
+			max: 2,
+			mean: 1.5,
+			count: 2,
+		});
 		expect(scanner).toEqual({
 			median: 0.375,
+			q1: 0.3125,
+			q3: 0.4375,
 			min: 0.25,
 			max: 0.5,
 			mean: 0.375,
@@ -62,5 +76,24 @@ describe("timing samples", () => {
 			{ ordinal: 1, checkDurationNs: 10, scannerDurationNs: 1 },
 			{ ordinal: 2, checkDurationNs: 20, scannerDurationNs: 2 },
 		]);
+	});
+});
+
+test("quartiles interpolate sorted samples without mutating their order", () => {
+	const values = [9, 1, 5, 3, 7];
+	expect(summarizeSamples(values)).toMatchObject({
+		min: 1,
+		q1: 3,
+		median: 5,
+		q3: 7,
+		max: 9,
+	});
+	expect(values).toEqual([9, 1, 5, 3, 7]);
+	expect(summarizeSamples([4, 4, 4])).toMatchObject({
+		min: 4,
+		q1: 4,
+		median: 4,
+		q3: 4,
+		max: 4,
 	});
 });

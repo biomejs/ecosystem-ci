@@ -31,7 +31,7 @@ const delta = $derived(percentDelta(medianMs(base), medianMs(head)));
 		→
 		{head === null ? "—" : formatMs(head.median)}</strong
 	>
-	<span class="mt-0.5 block text-xs" style:color={deltaColor(delta)}>
+	<span class="mt-0.5 block text-sm" style:color={deltaColor(delta)}>
 		{delta === null ? "no delta" : formatPct(delta)}
 		<span class="text-muted">median</span>
 	</span>

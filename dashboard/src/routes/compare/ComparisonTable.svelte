@@ -78,17 +78,17 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 		<div class="flex gap-6">
 			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
 				<strong class="text-worse text-xl tabular-nums">{reviewCount}</strong>
-				<span class="text-muted text-xs">review</span>
+				<span class="text-muted text-sm">review</span>
 			</div>
 			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
 				<strong class="text-better text-xl tabular-nums"
 					>{improvedCount}</strong
 				>
-				<span class="text-muted text-xs">improved</span>
+				<span class="text-muted text-sm">improved</span>
 			</div>
 			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
 				<strong class="text-xl tabular-nums">{quietCount}</strong>
-				<span class="text-muted text-xs">quiet</span>
+				<span class="text-muted text-sm">quiet</span>
 			</div>
 		</div>
 	</header>
@@ -119,11 +119,11 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 					></span>
 					<div>
 						<a
-							class="block wrap-anywhere font-semibold text-sm"
+							class="block wrap-anywhere font-semibold text-md"
 							href={`https://github.com/${row.repositorySlug}`}
 							>{row.repositorySlug}</a
 						>
-						<span class={`mt-0.5 block text-xs ${textTone[kind]}`}>
+						<span class={`mt-0.5 block text-sm ${textTone[kind]}`}>
 							{kind === "worse" ? "needs review" : kind}
 						</span>
 					</div>
