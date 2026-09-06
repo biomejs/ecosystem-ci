@@ -12,6 +12,10 @@ This is specifically useful to test if a Pull Request introduces or fixes a regr
 
 Failure and successes are reported on the [github-ecosystem-ci](https://discord.com/channels/1132231889290285117/1275181107318362153) channel on the Biome's Discord.
 
+Projects that need compatibility fixes can opt into a repo-stored patch applied
+before migration and checks. See [project patches](patches/README.md) for how to
+create and configure one.
+
 ## Dashboard
 
 The SvelteKit dashboard is a pnpm workspace in [`dashboard/`](dashboard/). Local development uses an emulated D1 database and R2 bucket. Download report artifacts, seed the local storage, then start the dashboard.

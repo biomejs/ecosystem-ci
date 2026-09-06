@@ -73,12 +73,15 @@ jobs:
           # - working-directory: where to execute `biome` (default is the root of the repository)
           #   The path is relative to the root of the repository
           # - arguments: extra arguments to pass to the `biome check` command (default is `.`)
+          # - patch: patch file relative to this repository (for example patches/astro.patch)
+          #   Applied from the target repository root before migration.
           - id: django
             repository: django/django
             ref: 73cc09f14f13fedddc14d6ba5b287cb33c24e4a4
           - id: cline
             repository: cline/cline
             ref: 48d63852745460ff0fa3dfcc0457bbe2493841de
+            patch: patches/cline.patch
           - id: astro
             repository: withastro/astro
             ref: 19dae210d42bd22662ee678c173676573b6168f2
@@ -112,6 +115,7 @@ jobs:
           - id: ten-framework
             repository: TEN-framework/ten-framework
             ref: 84ad09df7883f98a8eb446aa34bdf22ff96c64a9
+            patch: patches/ten-framework.patch
           - id: typebot
             repository: baptisteArno/typebot.io
             ref: 4bc37a4b5befe07de1739f5d52d8d1e7c05dcc9b
@@ -196,6 +200,7 @@ jobs:
           - id: liam
             repository: liam-hq/liam
             ref: c89f31d455cd8a5518e3920d8ada6605544cce31
+            patch: patches/liam.patch
           - id: byline-cms
             repository: Byline-CMS/bylinecms.dev
             ref: c27ada93adff84c0155553d8fee1de5fdff237a4
@@ -207,6 +212,8 @@ jobs:
     needs: build-biome
     timeout-minutes: 15
     runs-on: depot-ubuntu-24.04-arm-16
+    permissions:
+      contents: read
     steps:
       - name: Record job start
         id: job-start
@@ -235,13 +242,34 @@ jobs:
         working-directory: repository
         run: echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout ecosystem patches
+        if: ${{ matrix.patch != '' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: ecosystem-ci
+          sparse-checkout: patches
+          persist-credentials: false
+
+      - name: Apply project patch
+        id: patch
+        continue-on-error: true
+        working-directory: repository
+        env:
+          PROJECT_PATCH: ${{ matrix.patch }}
+        run: |
+          if [[ -n "$PROJECT_PATCH" ]]; then
+            # Stage the patch so migration can measure its own changes against it.
+            git apply --index -- "$GITHUB_WORKSPACE/ecosystem-ci/$PROJECT_PATCH"
+          fi
+
       - name: Migrate
+        if: ${{ steps.patch.outcome == 'success' }}
         id: migrate
         working-directory: repository/${{ matrix.working-directory }}
         run: |
           if ! biome migrate --write; then
             outcome=failed
-          elif [[ -n "$(git status --porcelain)" ]]; then
+          elif ! git diff --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
             outcome=succeeded_with_changes
           else
             outcome=succeeded_no_changes
@@ -249,7 +277,7 @@ jobs:
           echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
 
       - name: Run Biome check and generate report
-        if: ${{ ! cancelled() }}
+        if: ${{ ! cancelled() && steps.patch.outcome == 'success' }}
         id: test
         working-directory: repository/${{ matrix.working-directory }}
         env:
@@ -328,6 +356,14 @@ jobs:
             echo '{"error": true}' > "$REPORT_FILE"
           fi
 
+      - name: Record patch failure
+        if: ${{ ! cancelled() && steps.patch.outcome == 'failure' }}
+        env:
+          TARGET_ID: ${{ matrix.id }}
+        run: |
+          echo "::warning::Project patch failed; skipping migration and checks for $TARGET_ID"
+          echo '{"error": true, "errorPhase": "patch"}' > "$GITHUB_WORKSPACE/biome-report-$TARGET_ID.json"
+
       - name: Upload Biome report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -375,7 +411,7 @@ jobs:
 
       - name: Save outcome JSON
         run: |
-          echo '{"id": "${{ matrix.id }}", "outcome": "${{ steps.test.outputs.outcome }}"}' > "$GITHUB_WORKSPACE/outcome-${{ matrix.id }}.json"
+          echo '{"id": "${{ matrix.id }}", "outcome": "${{ steps.test.outputs.outcome || 'failure' }}"}' > "$GITHUB_WORKSPACE/outcome-${{ matrix.id }}.json"
 
       - name: Upload outcome
         if: ${{ always() }}
