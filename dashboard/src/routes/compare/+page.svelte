@@ -33,9 +33,7 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 	</small>
 {/snippet}
 
-<main
-	class="mx-auto w-full max-w-compare overflow-x-clip px-4 pt-5 pb-8 sm:px-6 sm:pt-7"
->
+<main class="w-full overflow-x-clip px-4 pt-5 pb-8 sm:px-6 sm:pt-7">
 	<header>
 		<a class="text-muted text-xs" href="/">← Ecosystem CI trends</a>
 	</header>

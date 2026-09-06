@@ -2,7 +2,7 @@
 <script lang="ts">
 import type { TimingStats } from "$lib/timing";
 import { formatMs } from "$lib/trends/format";
-import { trackPercent } from "./timing-view";
+import { timingDomain, trackPercent } from "./timing-view";
 
 let {
 	label,
@@ -17,8 +17,9 @@ let {
 	hue: string;
 } = $props();
 
-const lo = $derived(Math.min(base.min, head.min));
-const hi = $derived(Math.max(base.max, head.max));
+const { lo, hi } = $derived(
+	timingDomain(Math.min(base.min, head.min), Math.max(base.max, head.max)),
+);
 const x = (value: number): string => `${trackPercent(value, lo, hi)}%`;
 const width = (stats: TimingStats): string =>
 	`${Math.max(1.5, trackPercent(stats.max, lo, hi) - trackPercent(stats.min, lo, hi))}%`;
@@ -38,8 +39,8 @@ const runs = $derived([
 >
 	{#each runs as run (run.name)}
 		<div>
-			<span class="w-6 shrink-0">{run.name}</span>
-			<span>{formatMs(run.stats.min)}</span>
+			<span class="w-10 shrink-0">{run.name}</span>
+			<span>{formatMs(lo)}</span>
 			<svg
 				class="h-3.5 min-w-0 flex-1 overflow-visible"
 				role="img"
@@ -81,7 +82,7 @@ const runs = $derived([
 					<title>{run.name} median {formatMs(run.stats.median)}</title>
 				</circle>
 			</svg>
-			<span>{formatMs(run.stats.max)}</span>
+			<span>{formatMs(hi)}</span>
 		</div>
 	{/each}
 </div>

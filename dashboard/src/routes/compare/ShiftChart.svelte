@@ -4,7 +4,7 @@
 import type { TimingStats } from "$lib/timing";
 import { formatMs, formatPct } from "$lib/trends/format";
 import { deltaColor, percentDelta } from "./comparison";
-import { trackPercent } from "./timing-view";
+import { timingDomain, trackPercent } from "./timing-view";
 
 let {
 	label,
@@ -16,8 +16,12 @@ let {
 	head: TimingStats;
 } = $props();
 
-const lo = $derived(Math.min(base.min, head.median));
-const hi = $derived(Math.max(base.max, head.median));
+const { lo, hi } = $derived(
+	timingDomain(
+		Math.min(base.min, head.median),
+		Math.max(base.max, head.median),
+	),
+);
 const x = (value: number): number => trackPercent(value, lo, hi);
 const delta = $derived(percentDelta(base.median, head.median));
 const shiftMs = $derived(head.median - base.median);
@@ -36,10 +40,10 @@ const tickAnchor = $derived(
 );
 </script>
 
-<div class="flex items-center gap-1.5 whitespace-nowrap text-sm text-muted">
-	<span>{formatMs(lo)}</span>
+<div class="flex items-start gap-1.5 whitespace-nowrap text-sm text-muted">
+	<span class="flex items-center" style:height="22px">{formatMs(lo)}</span>
 	<svg
-		class="h-8 min-w-0 flex-1 overflow-visible"
+		class="h-12 min-w-0 flex-1 overflow-visible"
 		role="img"
 		aria-label={`${label}: base samples spread ${formatMs(base.min)} to ${formatMs(base.max)}; ${headTitle}`}
 	>
@@ -78,13 +82,13 @@ const tickAnchor = $derived(
 		</line>
 		<text
 			x={`${x(base.median)}%`}
-			y="31"
-			font-size="var(--text-chart-detail)"
+			y="36"
+			font-size="var(--text-sm)"
 			text-anchor={tickAnchor}
 			fill="var(--color-muted)"
 		>
 			base median
 		</text>
 	</svg>
-	<span>{formatMs(hi)}</span>
+	<span class="flex items-center" style:height="22px">{formatMs(hi)}</span>
 </div>
