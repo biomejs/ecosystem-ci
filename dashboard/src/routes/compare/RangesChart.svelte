@@ -1,8 +1,8 @@
-<!-- One min→max bar per run on a shared scale, with the median as a dot and the mean as a tick. -->
+<!-- A shared time ruler for both runs, with automatically selected major and minor ticks. -->
 <script lang="ts">
 import type { TimingStats } from "$lib/timing";
-import { formatMs } from "$lib/trends/format";
 import { landmarkTooltip } from "./landmark-tooltip";
+import { formatRulerTime, rangeRuler } from "./range-ruler";
 import { timingDomain, trackPercent } from "./timing-view";
 
 let {
@@ -10,90 +10,142 @@ let {
 	base,
 	head,
 	hue,
-}: {
-	label: string;
-	base: TimingStats;
-	head: TimingStats;
-	/** colour of the head run's marks */
-	hue: string;
-} = $props();
-
+}: { label: string; base: TimingStats; head: TimingStats; hue: string } =
+	$props();
 const { lo, hi } = $derived(
 	timingDomain(Math.min(base.min, head.min), Math.max(base.max, head.max)),
 );
-const x = (value: number): string => `${trackPercent(value, lo, hi)}%`;
-const width = (stats: TimingStats): string =>
-	`${Math.max(1.5, trackPercent(stats.max, lo, hi) - trackPercent(stats.min, lo, hi))}%`;
+let plotWidth = $state(300);
+const ruler = $derived(rangeRuler(lo, hi, plotWidth));
+const x = (value: number) => `${trackPercent(value, lo, hi)}%`;
+const anchor = (value: number) =>
+	trackPercent(value, lo, hi) < 10
+		? "start"
+		: trackPercent(value, lo, hi) > 90
+			? "end"
+			: "middle";
 const runs = $derived([
-	{
-		name: "base",
-		stats: base,
-		dot: "var(--color-ink-2)",
-		band: "var(--color-muted)",
-	},
-	{ name: "head", stats: head, dot: hue, band: hue },
+	{ name: "base", stats: base, color: "var(--color-ink-2)", y: 39 },
+	{ name: "head", stats: head, color: hue, y: 67 },
 ]);
 </script>
-
-<div
-	class="text-sm text-muted *:flex *:items-center *:gap-1.5 *:whitespace-nowrap"
->
-	{#each runs as run (run.name)}
-		<div>
-			<span class="w-10 shrink-0">{run.name}</span>
-			<span>{formatMs(lo)}</span>
-			<svg
-				class="h-3.5 min-w-0 flex-1 overflow-visible"
-				role="img"
-				aria-label={`${run.name} ${label}: ${formatMs(run.stats.min)} to ${formatMs(run.stats.max)}, median ${formatMs(run.stats.median)}`}
-			>
-				<g
-					use:landmarkTooltip={`${run.name} samples ${formatMs(run.stats.min)}–${formatMs(run.stats.max)}`}
-				>
-					<rect
-						x={x(run.stats.min)}
-						y="4"
-						width={width(run.stats)}
-						height="6"
-						rx="3"
-						fill={run.band}
-						opacity="0.45"
-					></rect>
-				</g>
-				<g use:landmarkTooltip={`${run.name} mean ${formatMs(run.stats.mean)}`}>
-					<line
-						x1={x(run.stats.mean)}
-						x2={x(run.stats.mean)}
-						y1="1"
-						y2="13"
-						stroke="transparent"
-						stroke-width="12"
-					/>
-					<line
-						x1={x(run.stats.mean)}
-						x2={x(run.stats.mean)}
-						y1="1"
-						y2="13"
-						stroke={run.dot}
-						stroke-width="1"
-						opacity="0.7"
-					></line>
-				</g>
-				<g
-					use:landmarkTooltip={`${run.name} median ${formatMs(run.stats.median)}`}
-				>
-					<circle cx={x(run.stats.median)} cy="7" r="8" fill="transparent" />
-					<circle
-						cx={x(run.stats.median)}
-						cy="7"
-						r="4"
-						fill={run.dot}
-						stroke="var(--color-surface)"
-						stroke-width="2"
-					></circle>
-				</g>
-			</svg>
-			<span>{formatMs(hi)}</span>
+<div class="mt-3">
+	<div class="flex gap-2">
+		<div class="w-10 shrink-0 text-sm text-muted" style:padding-top="25px">
+			<div class="flex items-center" style:height="28px">base</div>
+			<div class="flex items-center" style:height="28px">head</div>
 		</div>
-	{/each}
+		<div class="min-w-0 flex-1" bind:clientWidth={plotWidth}>
+			<svg
+				class="h-24 w-full overflow-visible"
+				role="img"
+				aria-label={`${label}: sample ranges from ${formatRulerTime(lo)} to ${formatRulerTime(hi)}; major ticks ${formatRulerTime(ruler.major)}, minor ticks ${formatRulerTime(ruler.minor)}`}
+			>
+				<line x1="0" x2="100%" y1="23" y2="23" stroke="var(--color-base)" />
+				{#each ruler.minorTicks as tick (tick)}
+					<line
+						x1={x(tick)}
+						x2={x(tick)}
+						y1="20"
+						y2="28"
+						stroke="var(--color-muted)"
+					/>
+				{/each}
+				{#each ruler.majorTicks as tick (tick)}
+					<text
+						x={x(tick)}
+						y="12"
+						text-anchor={anchor(tick)}
+						font-size="var(--text-sm)"
+						fill="var(--color-ink-2)"
+					>
+						{formatRulerTime(tick)}
+					</text>
+					<line
+						x1={x(tick)}
+						x2={x(tick)}
+						y1="18"
+						y2="79"
+						stroke="var(--color-base)"
+					/>
+				{/each}
+				{#each runs as run (run.name)}
+					<g
+						use:landmarkTooltip={`${run.name} range ${formatRulerTime(run.stats.min)}–${formatRulerTime(run.stats.max)}`}
+					>
+						<line
+							x1={x(run.stats.min)}
+							x2={x(run.stats.max)}
+							y1={run.y}
+							y2={run.y}
+							stroke="transparent"
+							stroke-width="14"
+						/>
+						<line
+							x1={x(run.stats.min)}
+							x2={x(run.stats.max)}
+							y1={run.y}
+							y2={run.y}
+							stroke={run.color}
+							stroke-width="4"
+						/>
+						<line
+							x1={x(run.stats.min)}
+							x2={x(run.stats.min)}
+							y1={run.y-5}
+							y2={run.y+5}
+							stroke={run.color}
+							stroke-width="2"
+						/>
+						<line
+							x1={x(run.stats.max)}
+							x2={x(run.stats.max)}
+							y1={run.y-5}
+							y2={run.y+5}
+							stroke={run.color}
+							stroke-width="2"
+						/>
+					</g>
+					<g
+						use:landmarkTooltip={`${run.name} mean ${formatRulerTime(run.stats.mean)}`}
+					>
+						<line
+							x1={x(run.stats.mean)}
+							x2={x(run.stats.mean)}
+							y1={run.y-6}
+							y2={run.y+6}
+							stroke="transparent"
+							stroke-width="10"
+						/>
+						<line
+							x1={x(run.stats.mean)}
+							x2={x(run.stats.mean)}
+							y1={run.y-6}
+							y2={run.y+6}
+							stroke={run.color}
+							opacity="0.7"
+						/>
+					</g>
+					<g
+						use:landmarkTooltip={`${run.name} median ${formatRulerTime(run.stats.median)}`}
+					>
+						<circle
+							cx={x(run.stats.median)}
+							cy={run.y}
+							r="8"
+							fill="transparent"
+						/>
+						<circle
+							cx={x(run.stats.median)}
+							cy={run.y}
+							r="4"
+							fill={run.color}
+							stroke="var(--color-surface)"
+							stroke-width="2"
+						/>
+					</g>
+				{/each}
+			</svg>
+		</div>
+	</div>
 </div>
