@@ -3,6 +3,8 @@ node_modules/
 .svelte-kit/
 build/
 .wrangler/
+__screenshots__/
+.vitest-attachments/
 /dashboard/data/runs/
 /dashboard/data/reports/
 /dashboard/data/manifest.json

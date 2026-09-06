@@ -57,6 +57,35 @@ jobs:
       - name: Run unit tests
         run: just test
 
+  browser-test:
+    name: Browser tests
+    runs-on: depot-ubuntu-24.04-arm-64
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pnpm and Node.js
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          runtime: node@24
+          cache: true
+
+      - name: Install Chromium and system dependencies
+        run: pnpm --dir dashboard exec playwright install --with-deps chromium
+
+      - name: Run browser tests
+        run: pnpm run test:browser
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-test-screenshots
+          path: dashboard/src/**/__screenshots__/**
+          if-no-files-found: ignore
+          retention-days: 7
+
   build:
     name: Production build
     runs-on: depot-ubuntu-24.04-arm-64

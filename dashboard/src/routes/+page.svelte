@@ -240,14 +240,26 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 		</div>
 
 		<div
-			class="border border-hair bg-surface mb-3 flex min-h-9 flex-wrap items-center gap-x-4 px-3 py-1.5 text-xs"
+			class="border border-hair bg-surface mb-3 grid min-h-9 items-center px-3 py-1.5 text-xs"
 			aria-live="polite"
 		>
-			{#if hovered}
+			<div
+				class="col-start-1 row-start-1 flex flex-wrap items-center gap-x-4"
+				class:invisible={!hovered}
+				aria-hidden={!hovered}
+			>
 				<span class="eyebrow">Run</span>
-				<span class="font-mono">{shortSha(hovered.sha)}</span>
-				<span class="text-ink-2">{formatDateTime(hovered.startedAt)} UTC</span>
-			{:else}
+				<span class="font-mono">{shortSha((hovered ?? latest).sha)}</span>
+				<span class="text-ink-2">
+					{formatDateTime((hovered ?? latest).startedAt)}
+					UTC
+				</span>
+			</div>
+			<div
+				class="col-start-1 row-start-1 flex flex-wrap items-center gap-x-4"
+				class:invisible={!!hovered}
+				aria-hidden={!!hovered}
+			>
 				<span>
 					<span class="font-semibold"
 						>{newCount} {newCount === 1 ? "repository" : "repositories"} with a
@@ -264,7 +276,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				<span class="text-muted ml-auto"
 					>Hover any chart to read one run across every cell. ← → scrubs.</span
 				>
-			{/if}
+			</div>
 		</div>
 
 		<StickyHorizontalScroll

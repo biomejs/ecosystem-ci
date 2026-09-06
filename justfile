@@ -12,13 +12,16 @@ lint:
 test:
 	pnpm run test
 
+test-browser:
+	pnpm run test:browser
+
 check:
 	pnpm run check
 
 build:
 	pnpm run build
 
-ci: lint test check build
+ci: lint test test-browser check build
 
 dev *args:
 	pnpm --dir dashboard exec vite dev --host {{args}}

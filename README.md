@@ -76,7 +76,15 @@ Install Node.js 24, pnpm, `just`, Git, and `unzip`. Run the following commands f
 
 To refresh from R2, download again and run `just db-setup-local`. For GitHub, `just reports-import` downloads new runs, applies migrations, and seeds automatically. Run `just db-seed-local` to reseed existing downloads without applying migrations.
 
-Run `just ci` to lint, test, type-check, and build the project.
+Run `just ci` to lint, run unit and browser tests, type-check, and build the project.
+
+Browser tests use Vitest Browser Mode with Playwright Chromium and the dashboard's
+real styles. Install the browser once with
+`pnpm --dir dashboard exec playwright install chromium`, then run
+`pnpm test:browser` or `just test-browser`. On Linux, add `--with-deps` to the
+install command if browser system dependencies are missing. Dashboard CI installs
+these dependencies and runs the browser tests on every pull request and main push.
+For interactive development, run `pnpm --dir dashboard exec vitest --browser.headless=false`.
 
 ### Deployment
 
