@@ -252,6 +252,7 @@ jobs:
 
       - name: Apply project patch
         id: patch
+        continue-on-error: true
         working-directory: repository
         env:
           PROJECT_PATCH: ${{ matrix.patch }}
@@ -262,6 +263,7 @@ jobs:
           fi
 
       - name: Migrate
+        if: ${{ steps.patch.outcome == 'success' }}
         id: migrate
         working-directory: repository/${{ matrix.working-directory }}
         run: |
@@ -354,6 +356,14 @@ jobs:
             echo '{"error": true}' > "$REPORT_FILE"
           fi
 
+      - name: Record patch failure
+        if: ${{ ! cancelled() && steps.patch.outcome == 'failure' }}
+        env:
+          TARGET_ID: ${{ matrix.id }}
+        run: |
+          echo "::warning::Project patch failed; skipping migration and checks for $TARGET_ID"
+          echo '{"error": true, "errorPhase": "patch"}' > "$GITHUB_WORKSPACE/biome-report-$TARGET_ID.json"
+
       - name: Upload Biome report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -401,7 +411,7 @@ jobs:
 
       - name: Save outcome JSON
         run: |
-          echo '{"id": "${{ matrix.id }}", "outcome": "${{ steps.test.outputs.outcome }}"}' > "$GITHUB_WORKSPACE/outcome-${{ matrix.id }}.json"
+          echo '{"id": "${{ matrix.id }}", "outcome": "${{ steps.test.outputs.outcome || 'failure' }}"}' > "$GITHUB_WORKSPACE/outcome-${{ matrix.id }}.json"
 
       - name: Upload outcome
         if: ${{ always() }}

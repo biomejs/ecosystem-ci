@@ -598,6 +598,16 @@ describe("sendDiscordMessage", () => {
 });
 
 describe("Integration tests", () => {
+	test("identifies patch failures in the Discord result", () => {
+		const outcome = computeFullOutcome(
+			{ id: "patch-failure", outcome: "failure" },
+			path.join(fixturesDir, "patch-reports"),
+		);
+		const message = aggregateResults([outcome], "main", "https://example.com");
+		assert.ok(message.includes("Project patch failed; Biome was not run"));
+		assert.ok(!message.includes("Error while running Biome"));
+	});
+
 	test("full workflow with fixtures", () => {
 		const outcomesDir = path.join(fixturesDir, "outcomes");
 		const reportsDir = path.join(fixturesDir, "reports");

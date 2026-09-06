@@ -33,8 +33,12 @@ CI applies the patch with `git apply --index` before `biome migrate --write` and
 all five check repetitions. Staging the patch keeps it out of the migration change
 count. The recorded repository commit remains the upstream pinned commit.
 Projects without a `patch` entry run as usual. A missing or conflicting patch
-fails preparation and skips migration and checks; target metadata records an
-execution error.
+skips migration and checks for that project. CI writes an error report placeholder
+and a failure outcome, and target metadata records an execution error. The job
+continues so report uploads and Discord notifications still run.
+The placeholder identifies `errorPhase: "patch"`, and the Discord result says
+"Project patch failed; Biome was not run". The patch step's log contains Git's
+error details.
 
 For failures, only add a patch after confirming the cause is in the project itself and
 cannot reasonably be resolved by fixing Biome or updating the pinned ref. Keep

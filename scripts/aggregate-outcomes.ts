@@ -91,6 +91,8 @@ export interface BiomeReport {
 	diagnostics?: BiomeDiagnostic[];
 	/** Error flag (set when report generation failed) */
 	error?: boolean;
+	/** Preparation stage that failed before Biome could run */
+	errorPhase?: "patch";
 }
 
 /**
@@ -353,11 +355,6 @@ export function readReport(
 			const content = fs.readFileSync(reportPath, "utf-8");
 			const report = JSON.parse(content) as BiomeReport;
 
-			// Check if this is an error placeholder
-			if (report.error === true) {
-				return { error: true };
-			}
-
 			return report;
 		} catch (error) {
 			console.error(
@@ -494,7 +491,9 @@ export function computeFullOutcome(
 	const baseTag = computeBaseTag(outcome);
 	const trend = computeTrend(previousReport, currentReport);
 	const time = currentReport?.error
-		? "Error while running Biome"
+		? currentReport.errorPhase === "patch"
+			? "Project patch failed; Biome was not run"
+			: "Error while running Biome"
 		: currentReport
 			? formatDuration(currentReport.summary?.duration)
 			: "?";
