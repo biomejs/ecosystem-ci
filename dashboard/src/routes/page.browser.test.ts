@@ -126,3 +126,79 @@ test("hovering a chart does not shift the dashboard layout", async () => {
 		await screen.unmount();
 	}
 }, 15_000);
+
+test("overview lines highlight the hovered repository and clear away from lines", async () => {
+	const screen = await render(Dashboard, { data });
+	await settleLayout();
+	for (const metric of ["Check", "Scanner"]) {
+		const chart = screen.getByRole("img", {
+			name: `${metric} time across repositories for 2 repositories over 3 runs, linear scale`,
+			exact: true,
+		});
+		const svg = chart.element() as unknown as SVGSVGElement;
+		const section = svg.closest("section");
+		if (!section) throw new Error("Missing chart section");
+		const line = Array.from(svg.querySelectorAll("path")).find(
+			(path) =>
+				path.getAttribute("fill") === "none" &&
+				path.textContent?.trim() === "biomejs/biome",
+		);
+		if (!line) throw new Error("Missing repository line");
+		for (const mode of [null, "Log scale", "Relative to first"]) {
+			if (mode) {
+				const label = Array.from(section.querySelectorAll("label")).find(
+					(label) => label.textContent?.trim() === mode,
+				);
+				const input = label?.querySelector("input");
+				if (!input) throw new Error(`Missing ${mode} control`);
+				input.click();
+				await settleLayout();
+			}
+			// Hover halfway along a segment, not just at a run's marker.
+			const point = line.getPointAtLength(line.getTotalLength() / 4);
+			const rect = svg.getBoundingClientRect();
+			svg.dispatchEvent(
+				new PointerEvent("pointermove", {
+					bubbles: true,
+					clientX: rect.left + point.x,
+					clientY: rect.top + point.y,
+				}),
+			);
+			await expect
+				.element(screen.getByRole("tooltip"))
+				.toHaveTextContent("biomejs/biome");
+			await expect
+				.poll(() =>
+					svg
+						.querySelector('g[aria-hidden="true"] path[fill="none"]')
+						?.getAttribute("d"),
+				)
+				.toBe(line.getAttribute("d"));
+			const band = Array.from(svg.querySelectorAll("path")).find(
+				(path) =>
+					path.textContent?.trim() === "biomejs/biome · min–max of samples",
+			);
+			if (!band) throw new Error("Missing sample range band");
+			const highlightBand = svg.querySelector(
+				'g[aria-hidden="true"] path:not([fill="none"])',
+			);
+			expect(highlightBand?.getAttribute("d")).toBe(band.getAttribute("d"));
+			expect(Number(highlightBand?.getAttribute("opacity"))).toBeGreaterThan(
+				Number(band.getAttribute("opacity")),
+			);
+			expect(svg.querySelector('g[aria-hidden="true"] line')).not.toBeNull();
+			svg.dispatchEvent(
+				new PointerEvent("pointermove", {
+					bubbles: true,
+					clientX: rect.left + 2,
+					clientY: rect.top + 2,
+				}),
+			);
+			await expect.element(screen.getByRole("tooltip")).not.toBeInTheDocument();
+			await expect
+				.poll(() => svg.querySelector('g[aria-hidden="true"]'))
+				.toBeNull();
+		}
+		svg.dispatchEvent(new PointerEvent("pointerleave"));
+	}
+});
