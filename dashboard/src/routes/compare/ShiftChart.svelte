@@ -4,7 +4,10 @@
 import type { TimingStats } from "$lib/timing";
 import { formatMs, formatPct } from "$lib/trends/format";
 import { deltaColor, percentDelta } from "./comparison";
-import { trackPercent } from "./timing-view";
+import { landmarkTooltip } from "./landmark-tooltip";
+import { rangeRuler } from "./range-ruler";
+import TimingRuler from "./TimingRuler.svelte";
+import { timingDomain, trackPercent } from "./timing-view";
 
 let {
 	label,
@@ -16,8 +19,14 @@ let {
 	head: TimingStats;
 } = $props();
 
-const lo = $derived(Math.min(base.min, head.median));
-const hi = $derived(Math.max(base.max, head.median));
+const { lo, hi } = $derived(
+	timingDomain(
+		Math.min(base.min, head.median),
+		Math.max(base.max, head.median),
+	),
+);
+let plotWidth = $state(300);
+const ruler = $derived(rangeRuler(lo, hi, plotWidth));
 const x = (value: number): number => trackPercent(value, lo, hi);
 const delta = $derived(percentDelta(base.median, head.median));
 const shiftMs = $derived(head.median - base.median);
@@ -36,55 +45,64 @@ const tickAnchor = $derived(
 );
 </script>
 
-<div class="flex items-center gap-1.5 whitespace-nowrap text-sm text-muted">
-	<span>{formatMs(lo)}</span>
+<div class="mt-3 min-w-0 text-sm text-muted" bind:clientWidth={plotWidth}>
 	<svg
-		class="h-8 min-w-0 flex-1 overflow-visible"
+		class="h-24 w-full overflow-visible"
 		role="img"
 		aria-label={`${label}: base samples spread ${formatMs(base.min)} to ${formatMs(base.max)}; ${headTitle}`}
 	>
-		<rect
-			x={`${x(base.min)}%`}
-			y="2"
-			width={`${Math.max(1.5, x(base.max) - x(base.min))}%`}
-			height="18"
-			rx="3"
-			fill="var(--color-muted)"
-			opacity="0.35"
-		>
-			<title>
-				base samples spread {formatMs(base.min)}–{formatMs(base.max)}
-			</title>
-		</rect>
-		<rect
-			x={`${Math.min(x(base.median), x(head.median))}%`}
-			y="6"
-			width={`${Math.max(1, Math.abs(x(head.median) - x(base.median)))}%`}
-			height="10"
-			rx="2"
-			fill={deltaColor(delta)}
-		>
-			<title>{headTitle}</title>
-		</rect>
-		<line
-			x1={`${x(base.median)}%`}
-			x2={`${x(base.median)}%`}
-			y1="0"
-			y2="22"
-			stroke="var(--color-ink)"
-			stroke-width="1.5"
-		>
-			<title>base median {formatMs(base.median)}</title>
-		</line>
-		<text
-			x={`${x(base.median)}%`}
-			y="31"
-			font-size="var(--text-chart-detail)"
-			text-anchor={tickAnchor}
-			fill="var(--color-muted)"
-		>
-			base median
-		</text>
+		<TimingRuler {lo} {hi} {ruler} bottom={54} />
+		<g transform="translate(0 30)">
+			<g
+				use:landmarkTooltip={`base samples spread ${formatMs(base.min)}–${formatMs(base.max)}`}
+			>
+				<rect
+					x={`${x(base.min)}%`}
+					y="2"
+					width={`${Math.max(1.5, x(base.max) - x(base.min))}%`}
+					height="18"
+					rx="3"
+					fill="var(--color-muted)"
+					opacity="0.35"
+				></rect>
+			</g>
+			<g use:landmarkTooltip={`${headTitle}`}>
+				<rect
+					x={`${Math.min(x(base.median), x(head.median))}%`}
+					y="6"
+					width={`${Math.max(1, Math.abs(x(head.median) - x(base.median)))}%`}
+					height="10"
+					rx="2"
+					fill={deltaColor(delta)}
+				></rect>
+			</g>
+			<g use:landmarkTooltip={`base median ${formatMs(base.median)}`}>
+				<line
+					x1={`${x(base.median)}%`}
+					x2={`${x(base.median)}%`}
+					y1="0"
+					y2="22"
+					stroke="transparent"
+					stroke-width="12"
+				/>
+				<line
+					x1={`${x(base.median)}%`}
+					x2={`${x(base.median)}%`}
+					y1="0"
+					y2="22"
+					stroke="var(--color-ink)"
+					stroke-width="1.5"
+				></line>
+			</g>
+			<text
+				x={`${x(base.median)}%`}
+				y="36"
+				font-size="var(--text-sm)"
+				text-anchor={tickAnchor}
+				fill="var(--color-muted)"
+			>
+				base median
+			</text>
+		</g>
 	</svg>
-	<span>{formatMs(hi)}</span>
 </div>

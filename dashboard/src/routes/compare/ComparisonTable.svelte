@@ -17,7 +17,10 @@ import type { RepositoryComparison } from "./types";
 let {
 	comparisons,
 	timingView,
-}: { comparisons: RepositoryComparison[]; timingView: TimingView } = $props();
+}: {
+	comparisons: RepositoryComparison[];
+	timingView: TimingView;
+} = $props();
 
 const rows = $derived(
 	[...comparisons].sort((left, right) => {
@@ -53,15 +56,19 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 </script>
 
 {#snippet countCell(label: string, base: number, head: number, delta: number, color: string)}
-	<div class="min-w-0 tabular-nums">
-		<span class="eyebrow mb-1 block md:hidden">{label}</span>
-		<strong class="block whitespace-nowrap font-semibold text-sm"
-			>{formatCount(base)}
-			→ {formatCount(head)}</strong
-		>
-		<span class="mt-0.5 block text-xs" style:color={color}>
-			{signedCount(delta)}
-		</span>
+	<div
+		class="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 tabular-nums"
+	>
+		<span class="text-ink-2">{label}</span>
+		<div class="flex items-baseline gap-2 whitespace-nowrap">
+			<strong class="font-semibold text-ink"
+				>{formatCount(base)}
+				→ {formatCount(head)}</strong
+			>
+			<span style:color={color}>
+				{signedCount(delta)}
+			</span>
+		</div>
 	</div>
 {/snippet}
 
@@ -71,17 +78,17 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 		<div class="flex gap-6">
 			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
 				<strong class="text-worse text-xl tabular-nums">{reviewCount}</strong>
-				<span class="text-muted text-xs">review</span>
+				<span class="text-muted text-sm">review</span>
 			</div>
 			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
 				<strong class="text-better text-xl tabular-nums"
 					>{improvedCount}</strong
 				>
-				<span class="text-muted text-xs">improved</span>
+				<span class="text-muted text-sm">improved</span>
 			</div>
 			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
 				<strong class="text-xl tabular-nums">{quietCount}</strong>
-				<span class="text-muted text-xs">quiet</span>
+				<span class="text-muted text-sm">quiet</span>
 			</div>
 		</div>
 	</header>
@@ -95,7 +102,6 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 			<span>{METRIC_BY_KEY.checkMs.label}</span>
 			<span>{METRIC_BY_KEY.scannerMs.label}</span>
 			<span>Diagnostics</span>
-			<span>Panics</span>
 		</div>
 		{#each rows as row (row.repositorySlug)}
 			{const kind = $derived(reviewKind(row))}
@@ -113,11 +119,11 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 					></span>
 					<div>
 						<a
-							class="block wrap-anywhere font-semibold text-sm"
+							class="block wrap-anywhere font-semibold text-md"
 							href={`https://github.com/${row.repositorySlug}`}
 							>{row.repositorySlug}</a
 						>
-						<span class={`mt-0.5 block text-xs ${textTone[kind]}`}>
+						<span class={`mt-0.5 block text-sm ${textTone[kind]}`}>
 							{kind === "worse" ? "needs review" : kind}
 						</span>
 					</div>
@@ -136,20 +142,29 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 					hue={METRIC_BY_KEY.scannerMs.hue}
 					view={timingView}
 				/>
-				{@render countCell(
+				<div class="grid gap-1.5">
+					{@render countCell(
 					"Diagnostics",
 					diagnosticTotal(row.base),
 					diagnosticTotal(row.head),
 					diagnostics,
 					deltaColor(diagnosticsRate),
 				)}
-				{@render countCell(
+					{@render countCell(
+					"Parse",
+					row.base.parseDiagnostics,
+					row.head.parseDiagnostics,
+					row.head.parseDiagnostics - row.base.parseDiagnostics,
+					deltaColor(relativeDelta(row.base.parseDiagnostics, row.head.parseDiagnostics)),
+				)}
+					{@render countCell(
 					"Panics",
 					row.base.panics,
 					row.head.panics,
 					panics,
 					deltaColor(panics, 1),
 				)}
+				</div>
 			</article>
 		{/each}
 	</div>

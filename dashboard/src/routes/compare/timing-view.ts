@@ -25,6 +25,16 @@ export function selectTimingView(requested: string | null): TimingView {
 	return requested === "shift" ? "shift" : "ranges";
 }
 
+/** Keep small timing changes in proportion, with at least 10ms on the axis. */
+export function timingDomain(
+	min: number,
+	max: number,
+): { lo: number; hi: number } {
+	const span = Math.max(10, max - min);
+	const lo = Math.max(0, (min + max - span) / 2);
+	return { lo, hi: lo + span };
+}
+
 /** position of a value along a track, as a percentage; a flat domain sits in the middle */
 export function trackPercent(value: number, lo: number, hi: number): number {
 	return hi === lo ? 50 : ((value - lo) / (hi - lo)) * 100;

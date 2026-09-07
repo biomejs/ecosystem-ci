@@ -9,23 +9,33 @@ export interface TimingSample {
 
 export interface TimingStats {
 	median: number;
+	q1: number;
+	q3: number;
 	min: number;
 	max: number;
 	mean: number;
 	count: number;
 }
 
+/** Linear interpolation between adjacent sorted samples, at (n - 1) * probability. */
+function quantile(sorted: number[], probability: number): number {
+	const position = (sorted.length - 1) * probability;
+	const lower = Math.floor(position);
+	const upper = Math.ceil(position);
+	return sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower);
+}
+
 export function median(values: number[]): number {
-	const sorted = values.toSorted((a, b) => a - b);
-	const middle = sorted.length >> 1;
-	return sorted.length % 2 === 1
-		? sorted[middle]
-		: (sorted[middle - 1] + sorted[middle]) / 2;
+	return quantile(
+		values.toSorted((a, b) => a - b),
+		0.5,
+	);
 }
 
 /** null when there are no samples */
 export function summarizeSamples(values: number[]): TimingStats | null {
 	if (values.length === 0) return null;
+	const sorted = values.toSorted((a, b) => a - b);
 	let min = Number.POSITIVE_INFINITY;
 	let max = Number.NEGATIVE_INFINITY;
 	let sum = 0;
@@ -35,7 +45,9 @@ export function summarizeSamples(values: number[]): TimingStats | null {
 		sum += value;
 	}
 	return {
-		median: median(values),
+		median: quantile(sorted, 0.5),
+		q1: quantile(sorted, 0.25),
+		q3: quantile(sorted, 0.75),
 		min,
 		max,
 		mean: sum / values.length,

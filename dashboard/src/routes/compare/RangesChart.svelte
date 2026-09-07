@@ -1,87 +1,122 @@
-<!-- One min→max bar per run on a shared scale, with the median as a dot and the mean as a tick. -->
+<!-- A shared time ruler for both runs, with automatically selected major and minor ticks. -->
 <script lang="ts">
 import type { TimingStats } from "$lib/timing";
-import { formatMs } from "$lib/trends/format";
-import { trackPercent } from "./timing-view";
+import { landmarkTooltip } from "./landmark-tooltip";
+import { formatRulerTime, rangeRuler } from "./range-ruler";
+import TimingRuler from "./TimingRuler.svelte";
+import { timingDomain, trackPercent } from "./timing-view";
 
 let {
 	label,
 	base,
 	head,
 	hue,
-}: {
-	label: string;
-	base: TimingStats;
-	head: TimingStats;
-	/** colour of the head run's marks */
-	hue: string;
-} = $props();
-
-const lo = $derived(Math.min(base.min, head.min));
-const hi = $derived(Math.max(base.max, head.max));
-const x = (value: number): string => `${trackPercent(value, lo, hi)}%`;
-const width = (stats: TimingStats): string =>
-	`${Math.max(1.5, trackPercent(stats.max, lo, hi) - trackPercent(stats.min, lo, hi))}%`;
+}: { label: string; base: TimingStats; head: TimingStats; hue: string } =
+	$props();
+const { lo, hi } = $derived(
+	timingDomain(Math.min(base.min, head.min), Math.max(base.max, head.max)),
+);
+let plotWidth = $state(300);
+const ruler = $derived(rangeRuler(lo, hi, plotWidth));
+const x = (value: number) => `${trackPercent(value, lo, hi)}%`;
 const runs = $derived([
-	{
-		name: "base",
-		stats: base,
-		dot: "var(--color-ink-2)",
-		band: "var(--color-muted)",
-	},
-	{ name: "head", stats: head, dot: hue, band: hue },
+	{ name: "base", stats: base, color: "var(--color-ink-2)", y: 39 },
+	{ name: "head", stats: head, color: hue, y: 67 },
 ]);
 </script>
-
-<div
-	class="text-sm text-muted *:flex *:items-center *:gap-1.5 *:whitespace-nowrap"
->
-	{#each runs as run (run.name)}
-		<div>
-			<span class="w-6 shrink-0">{run.name}</span>
-			<span>{formatMs(run.stats.min)}</span>
-			<svg
-				class="h-3.5 min-w-0 flex-1 overflow-visible"
-				role="img"
-				aria-label={`${run.name} ${label}: ${formatMs(run.stats.min)} to ${formatMs(run.stats.max)}, median ${formatMs(run.stats.median)}`}
-			>
-				<rect
-					x={x(run.stats.min)}
-					y="4"
-					width={width(run.stats)}
-					height="6"
-					rx="3"
-					fill={run.band}
-					opacity="0.45"
-				>
-					<title>
-						{run.name}
-						samples {formatMs(run.stats.min)}–{formatMs(run.stats.max)}
-					</title>
-				</rect>
-				<line
-					x1={x(run.stats.mean)}
-					x2={x(run.stats.mean)}
-					y1="1"
-					y2="13"
-					stroke={run.dot}
-					stroke-width="1"
-					opacity="0.7"
-				>
-					<title>{run.name} mean {formatMs(run.stats.mean)}</title>
-				</line>
-				<circle
-					cx={x(run.stats.median)}
-					cy="7"
-					r="4"
-					fill={run.dot}
-					stroke="var(--color-surface)"
-					stroke-width="2"
-				>
-					<title>{run.name} median {formatMs(run.stats.median)}</title>
-				</circle>
-			</svg>
-			<span>{formatMs(run.stats.max)}</span>
+<div class="mt-3">
+	<div class="flex gap-2">
+		<div class="w-10 shrink-0 text-sm text-muted" style:padding-top="25px">
+			<div class="flex items-center" style:height="28px">base</div>
+			<div class="flex items-center" style:height="28px">head</div>
 		</div>
-	{/each}
+		<div class="min-w-0 flex-1" bind:clientWidth={plotWidth}>
+			<svg
+				class="h-24 w-full overflow-visible"
+				role="img"
+				aria-label={`${label}: box plots with min/max whiskers from ${formatRulerTime(lo)} to ${formatRulerTime(hi)}; major ticks ${formatRulerTime(ruler.major)}, minor ticks ${formatRulerTime(ruler.minor)}`}
+			>
+				<TimingRuler {lo} {hi} {ruler} bottom={79} />
+				{#each runs as run (run.name)}
+					<g
+						use:landmarkTooltip={`${run.name} range ${formatRulerTime(run.stats.min)}–${formatRulerTime(run.stats.max)}`}
+					>
+						<line
+							x1={x(run.stats.min)}
+							x2={x(run.stats.max)}
+							y1={run.y}
+							y2={run.y}
+							stroke="transparent"
+							stroke-width="14"
+						/>
+						<line
+							x1={x(run.stats.min)}
+							x2={x(run.stats.max)}
+							y1={run.y}
+							y2={run.y}
+							stroke={run.color}
+							stroke-width="1.5"
+						/>
+						<line
+							x1={x(run.stats.min)}
+							x2={x(run.stats.min)}
+							y1={run.y-5}
+							y2={run.y+5}
+							stroke={run.color}
+							stroke-width="2"
+						/>
+						<line
+							x1={x(run.stats.max)}
+							x2={x(run.stats.max)}
+							y1={run.y-5}
+							y2={run.y+5}
+							stroke={run.color}
+							stroke-width="2"
+						/>
+					</g>
+					<g
+						use:landmarkTooltip={`${run.name} middle 50%: Q1 ${formatRulerTime(run.stats.q1)}, Q3 ${formatRulerTime(run.stats.q3)}; mean ${formatRulerTime(run.stats.mean)}; ${run.stats.count} samples`}
+					>
+						<rect
+							x={x(run.stats.q1)}
+							y={run.y-7}
+							width={`${trackPercent(run.stats.q3,lo,hi)-trackPercent(run.stats.q1,lo,hi)}%`}
+							height="14"
+							fill="var(--color-surface)"
+						/>
+						<rect
+							x={x(run.stats.q1)}
+							y={run.y-7}
+							width={`${trackPercent(run.stats.q3,lo,hi)-trackPercent(run.stats.q1,lo,hi)}%`}
+							height="14"
+							fill={run.color}
+							fill-opacity="0.3"
+							stroke={run.color}
+							stroke-width="1.5"
+						/>
+					</g>
+					<g
+						use:landmarkTooltip={`${run.name} median ${formatRulerTime(run.stats.median)}`}
+					>
+						<line
+							x1={x(run.stats.median)}
+							x2={x(run.stats.median)}
+							y1={run.y-8}
+							y2={run.y+8}
+							stroke="transparent"
+							stroke-width="10"
+						/>
+						<line
+							x1={x(run.stats.median)}
+							x2={x(run.stats.median)}
+							y1={run.y-7}
+							y2={run.y+7}
+							stroke={run.color}
+							stroke-width="2"
+						/>
+					</g>
+				{/each}
+			</svg>
+		</div>
+	</div>
 </div>

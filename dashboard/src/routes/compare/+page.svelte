@@ -20,24 +20,23 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 </svelte:head>
 
 {#snippet runSummary(run: NonNullable<PageData["base"]>)}
-	<small class="mt-2 flex min-w-0 gap-2.5 text-muted text-xs">
-		<span class="min-w-0 flex-auto truncate font-mono text-ink-2"
-			>{run.biomeBranch}</span
-		>
+	<small class="mt-2 flex min-w-0 gap-2.5 text-muted text-sm">
+		<span class="min-w-0 flex-auto truncate font-mono text-ink-2">
+			{run.biomeBranch}
+		</span>
 		<a
 			class="shrink-0"
 			href={`https://github.com/biomejs/biome/commit/${run.biomeCommitSha}`}
-			>{shortSha(run.biomeCommitSha)}</a
 		>
+			{shortSha(run.biomeCommitSha)}
+		</a>
 		<span class="shrink-0">{run.results} reports</span>
 	</small>
 {/snippet}
 
-<main
-	class="mx-auto w-full max-w-compare overflow-x-clip px-4 pt-5 pb-8 sm:px-6 sm:pt-7"
->
+<main class="w-full overflow-x-clip px-4 pt-5 pb-8 sm:px-6 sm:pt-7">
 	<header>
-		<a class="text-muted text-xs" href="/">← Ecosystem CI trends</a>
+		<a class="text-muted text-sm" href="/">← Ecosystem CI trends</a>
 	</header>
 
 	{#if data.base && data.head}

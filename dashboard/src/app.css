@@ -26,7 +26,6 @@
 	--text-chart-detail: 8px;
 	--tracking-eyebrow: 0.04em;
 
-	--container-compare: 76rem;
 	--spacing-dashboard-table: 82.5rem;
 
 	/* repository, four metrics, severity */
@@ -35,9 +34,9 @@
 	/* value column plus a fixed sparkline column */
 	--grid-template-columns-metric: minmax(0, 1fr) 5.5rem;
 	--grid-template-columns-severity: minmax(0, 1fr) 6rem;
-	/* repository, two timing columns, diagnostics, panics */
+	/* repository, two timing columns, diagnostics and panics */
 	--grid-template-columns-scan: minmax(8rem, 0.7fr) repeat(2, minmax(9rem, 1fr))
-		minmax(6rem, 0.6fr) minmax(5rem, 0.55fr);
+		minmax(8rem, 0.6fr);
 	/* baseline, arrow, compared, submit */
 	--grid-template-columns-picker: minmax(0, 1fr) auto minmax(0, 1fr) auto;
 }
