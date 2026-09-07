@@ -25,6 +25,7 @@ let {
 let width = $state(600);
 let logarithmic = $state(false);
 let relative = $state(false);
+let hoveredSlug = $state<string | null>(null);
 const height = 190;
 const margin = { left: 54, right: 10, top: 8, bottom: 24 };
 const plotWidth = $derived(Math.max(10, width - margin.left - margin.right));
@@ -79,6 +80,9 @@ const series = $derived(
 			ranges: relative ? relativeRanges(item.ranges, baseline) : item.ranges,
 		};
 	}),
+);
+const hoveredSeries = $derived(
+	series.find((item) => item.slug === hoveredSlug),
 );
 const allValues = $derived(
 	series.flatMap((item) =>
@@ -248,9 +252,48 @@ function toggleRelative(event: Event) {
 
 function onpointermove(event: PointerEvent) {
 	const rect = (event.currentTarget as SVGSVGElement).getBoundingClientRect();
+	const pointerX = event.clientX - rect.left;
+	const pointerY = event.clientY - rect.top;
 	const index = Math.round(
-		((event.clientX - rect.left - margin.left) / plotWidth) * (runs.length - 1),
+		((pointerX - margin.left) / plotWidth) * (runs.length - 1),
 	);
+	let nearestSlug: string | null = null;
+	let nearestDistance = 6;
+	for (const item of series) {
+		let previous: { x: number; y: number } | null = null;
+		item.values.forEach((value, index) => {
+			if (value === null || (logarithmic && value <= 0)) {
+				previous = null;
+				return;
+			}
+			const point = { x: x(index), y: y(value) };
+			const start = previous ?? point;
+			const dx = point.x - start.x;
+			const dy = point.y - start.y;
+			const lengthSquared = dx * dx + dy * dy;
+			const position =
+				lengthSquared === 0
+					? 0
+					: Math.max(
+							0,
+							Math.min(
+								1,
+								((pointerX - start.x) * dx + (pointerY - start.y) * dy) /
+									lengthSquared,
+							),
+						);
+			const distance = Math.hypot(
+				pointerX - (start.x + position * dx),
+				pointerY - (start.y + position * dy),
+			);
+			if (distance < nearestDistance) {
+				nearestDistance = distance;
+				nearestSlug = item.slug;
+			}
+			previous = point;
+		});
+	}
+	hoveredSlug = nearestSlug;
 	hover.index = Math.max(0, Math.min(runs.length - 1, index));
 }
 
@@ -287,7 +330,7 @@ function onkeydown(event: KeyboardEvent) {
 		{formatDay(runs[focusIndex].startedAt)}
 		· {focusRange} · medians; bands and ticks span each run's samples
 	</p>
-	<div class="min-w-0 overflow-hidden" bind:clientWidth={width}>
+	<div class="relative min-w-0 overflow-hidden" bind:clientWidth={width}>
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<svg
 			{width}
@@ -297,7 +340,10 @@ function onkeydown(event: KeyboardEvent) {
 			aria-label={`${title} for ${repos.length} repositories over ${runs.length} runs, ${relative ? "relative to first sample" : logarithmic ? "logarithmic scale" : "linear scale"}`}
 			tabindex="0"
 			{onpointermove}
-			onpointerleave={() => (hover.index = null)}
+			onpointerleave={() => {
+				hover.index = null;
+				hoveredSlug = null;
+			}}
 			{onkeydown}
 		>
 			{#each ticks as tick (tick)}
@@ -322,7 +368,7 @@ function onkeydown(event: KeyboardEvent) {
 			{#each series as item (item.slug)}
 				{const band = $derived(bandPath(item.values, item.ranges))}
 				{#if band}
-					<path d={band} fill={hue} opacity="0.07">
+					<path d={band} fill={hue} opacity={hoveredSeries ? "0.025" : "0.07"}>
 						<title>{item.slug} · min–max of samples</title>
 					</path>
 				{/if}
@@ -335,7 +381,7 @@ function onkeydown(event: KeyboardEvent) {
 					stroke-width="1.4"
 					stroke-linejoin="round"
 					stroke-linecap="round"
-					opacity="0.28"
+					opacity={hoveredSeries ? "0.12" : "0.28"}
 				>
 					<title>{item.slug}</title>
 				</path>
@@ -378,6 +424,48 @@ function onkeydown(event: KeyboardEvent) {
 					</circle>
 				{/each}
 			{/if}
+			{#if hoveredSeries}
+				<g pointer-events="none" aria-hidden="true">
+					<path
+						d={bandPath(hoveredSeries.values, hoveredSeries.ranges)}
+						fill={hue}
+						opacity="0.25"
+					/>
+					{#each focusValues.filter((point) => point.slug === hoveredSeries.slug) as point (point.slug)}
+						{#if point.range !== null && point.range[0] !== point.range[1]}
+							<line
+								x1={x(focusIndex)}
+								x2={x(focusIndex)}
+								y1={y(point.range[1])}
+								y2={y(point.range[0])}
+								stroke={hue}
+								stroke-width="3"
+							/>
+						{/if}
+					{/each}
+					<path
+						d={linePath(hoveredSeries.values)}
+						fill="none"
+						stroke={hue}
+						stroke-width="3"
+						stroke-linejoin="round"
+						stroke-linecap="round"
+					/>
+					{#each hoveredSeries.values as value, index (index)}
+						{#if value !== null && (!logarithmic || value > 0)}
+							<circle cx={x(index)} cy={y(value)} r="3" fill={hue} />
+						{/if}
+					{/each}
+				</g>
+			{/if}
 		</svg>
+		{#if hoveredSeries}
+			<div
+				role="tooltip"
+				class="pointer-events-none absolute right-3 top-2 max-w-full break-all border border-hair bg-surface px-2 py-1 text-sm"
+			>
+				{hoveredSeries.slug}
+			</div>
+		{/if}
 	</div>
 </section>
