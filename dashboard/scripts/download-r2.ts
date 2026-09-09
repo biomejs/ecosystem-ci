@@ -1,8 +1,9 @@
-import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { execFile } from "node:child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseArgs } from "node:util";
+import { parseArgs, promisify } from "node:util";
+import * as z from "zod";
 import {
 	dataDirectory,
 	installRunDirectory,
@@ -31,43 +32,107 @@ export function parseDownloadArguments(args: string[]): {
 	return { runIds: [...new Set(runIds)], help: values.help ?? false };
 }
 
+const credentialsSchema = z.union([
+	z.object({ type: z.enum(["oauth", "api_token"]), token: z.string().min(1) }),
+	z.object({
+		type: z.literal("api_key"),
+		key: z.string().min(1),
+		email: z.string().min(1),
+	}),
+]);
+const objectPageSchema = z.object({
+	success: z.literal(true),
+	result: z.array(z.object({ key: z.string() })),
+	result_info: z
+		.object({
+			cursor: z.string().optional(),
+			is_truncated: z.boolean().optional(),
+		})
+		.optional(),
+});
+
+async function wranglerHeaders(): Promise<Record<string, string>> {
+	// Capture credentials in memory; never print them or pass them as command arguments.
+	let stdout: string;
+	try {
+		({ stdout } = await promisify(execFile)(
+			"pnpm",
+			["exec", "wrangler", "auth", "token", "--json"],
+			{
+				cwd: fileURLToPath(new URL("..", import.meta.url)),
+				encoding: "utf8",
+			},
+		));
+	} catch {
+		throw new Error(
+			"Could not read Wrangler credentials. Run pnpm --dir dashboard exec wrangler login, or set CLOUDFLARE_API_TOKEN.",
+		);
+	}
+	const credentials = credentialsSchema.parse(JSON.parse(stdout));
+	return credentials.type === "api_key"
+		? { "X-Auth-Key": credentials.key, "X-Auth-Email": credentials.email }
+		: { Authorization: `Bearer ${credentials.token}` };
+}
+
+export function createR2Downloader(
+	headers: Record<string, string>,
+	request: typeof fetch = fetch,
+) {
+	const objectsUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID ?? accountId}/r2/buckets/${bucket}/objects`;
+	async function get(url: string | URL): Promise<Response> {
+		const response = await request(url, { headers });
+		if (!response.ok) {
+			throw new Error(
+				`R2 download failed (HTTP ${response.status}). Check your Wrangler login and access to ${bucket}.`,
+			);
+		}
+		return response;
+	}
+	return async (prefix: string, destination: string): Promise<void> => {
+		let cursor: string | undefined;
+		do {
+			const url = new URL(objectsUrl);
+			url.searchParams.set("prefix", prefix);
+			url.searchParams.set("per_page", "1000");
+			if (cursor) url.searchParams.set("cursor", cursor);
+			const page = objectPageSchema.parse(await (await get(url)).json());
+			for (const { key } of page.result) {
+				const relative = key.slice(prefix.length);
+				if (
+					!key.startsWith(prefix) ||
+					relative
+						.split("/")
+						.some(
+							(part) =>
+								!part || part === "." || part === ".." || part.includes("\\"),
+						)
+				) {
+					throw new Error(`Unexpected R2 object key: ${key}`);
+				}
+				const response = await get(
+					`${objectsUrl}/${key.split("/").map(encodeURIComponent).join("/")}`,
+				);
+				const path = join(destination, relative);
+				await mkdir(dirname(path), { recursive: true });
+				await writeFile(path, new Uint8Array(await response.arrayBuffer()));
+			}
+			const nextCursor = page.result_info?.cursor;
+			if (page.result_info?.is_truncated === true && !nextCursor) {
+				throw new Error("R2 returned a truncated listing without a cursor.");
+			}
+			if (nextCursor && nextCursor === cursor)
+				throw new Error("R2 returned a repeated listing cursor.");
+			cursor =
+				page.result_info?.is_truncated === false ? undefined : nextCursor;
+		} while (cursor);
+	};
+}
+
 async function downloadPrefix(
 	prefix: string,
 	destination: string,
 ): Promise<void> {
-	await new Promise<void>((resolvePromise, reject) => {
-		const child = spawn(
-			"aws",
-			[
-				"s3",
-				"sync",
-				`s3://${bucket}/${prefix}`,
-				destination,
-				"--endpoint-url",
-				`https://${process.env.CLOUDFLARE_ACCOUNT_ID ?? accountId}.r2.cloudflarestorage.com`,
-				"--region",
-				"auto",
-				"--no-progress",
-			],
-			{ stdio: "inherit" },
-		);
-		child.once("error", (error: NodeJS.ErrnoException) =>
-			reject(
-				error.code === "ENOENT"
-					? new Error(
-							"Install the AWS CLI and configure R2 credentials before downloading reports.",
-						)
-					: error,
-			),
-		);
-		child.once("close", (code) =>
-			code === 0
-				? resolvePromise()
-				: reject(
-						new Error(`R2 download failed (aws exited with code ${code})`),
-					),
-		);
-	});
+	await createR2Downloader(await wranglerHeaders())(prefix, destination);
 }
 
 export async function downloadRuns(
@@ -111,8 +176,9 @@ async function main(): Promise<void> {
 
 Download published run folders from remote R2 into dashboard/data/runs.
 With no IDs, download all published runs. Local files are replaced only after download succeeds.
-Requires the AWS CLI with R2 credentials (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY,
-or an AWS profile). CLOUDFLARE_ACCOUNT_ID overrides the repository's account.
+Uses your Wrangler login or CLOUDFLARE_API_TOKEN. To sign in, run:
+pnpm --dir dashboard exec wrangler login
+CLOUDFLARE_ACCOUNT_ID overrides the repository's account.
 
 Then run just db-setup-local to migrate and seed local D1/R2.`);
 		return;

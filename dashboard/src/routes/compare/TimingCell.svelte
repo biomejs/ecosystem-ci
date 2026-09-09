@@ -2,7 +2,7 @@
 <script lang="ts">
 import type { TimingStats } from "$lib/timing";
 import { formatMs, formatPct } from "$lib/trends/format";
-import { deltaColor, medianMs, percentDelta } from "./comparison";
+import { medianMs, percentDelta, timingDeltaColor } from "./comparison";
 import RangesChart from "./RangesChart.svelte";
 import ShiftChart from "./ShiftChart.svelte";
 import type { TimingView } from "./timing-view";
@@ -31,7 +31,7 @@ const delta = $derived(percentDelta(medianMs(base), medianMs(head)));
 		→
 		{head === null ? "—" : formatMs(head.median)}</strong
 	>
-	<span class="mt-0.5 block text-sm" style:color={deltaColor(delta)}>
+	<span class="mt-0.5 block text-sm" style:color={timingDeltaColor(base, head)}>
 		{delta === null ? "no delta" : formatPct(delta)}
 		<span class="text-muted">median</span>
 	</span>

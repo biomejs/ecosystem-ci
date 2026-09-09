@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
+	createR2Downloader,
 	downloadRuns,
 	parseDownloadArguments,
 } from "../dashboard/scripts/download-r2";
@@ -88,6 +89,99 @@ async function renameIdentity(directory: string): Promise<void> {
 }
 
 describe("R2 download", () => {
+	test("downloads paginated Cloudflare objects using Wrangler credentials", async () => {
+		const local = await temporaryDirectory();
+		const headers = { Authorization: "Bearer test-token" };
+		const calls: URL[] = [];
+		const request: typeof fetch = async (input, init) => {
+			const url = new URL(String(input));
+			calls.push(url);
+			expect(url.origin).toBe("https://api.cloudflare.com");
+			expect(init?.headers).toEqual(headers);
+			if (url.pathname.endsWith("/objects")) {
+				expect(url.searchParams.get("prefix")).toBe("runs/123/");
+				return Response.json(
+					url.searchParams.has("cursor")
+						? {
+								success: true,
+								result: [
+									{ key: "runs/123/attempts/1/reports/owner/repo.json" },
+								],
+								result_info: { is_truncated: false },
+							}
+						: {
+								success: true,
+								result: [{ key: "runs/123/attempts/1/manifest.json" }],
+								result_info: { cursor: "next-page", is_truncated: true },
+							},
+				);
+			}
+			return new Response(
+				url.pathname.endsWith("manifest.json") ? "manifest" : "report",
+			);
+		};
+		await createR2Downloader(headers, request)("runs/123/", local);
+		expect(calls[2].searchParams.get("cursor")).toBe("next-page");
+		expect(
+			await readFile(join(local, "attempts/1/manifest.json"), "utf8"),
+		).toBe("manifest");
+		expect(
+			await readFile(join(local, "attempts/1/reports/owner/repo.json"), "utf8"),
+		).toBe("report");
+	});
+
+	test("a failed object download preserves the installed run", async () => {
+		const local = await temporaryDirectory();
+		const directory = await writeRun(local);
+		const original = await readFile(join(directory, "manifest.json"), "utf8");
+		const request: typeof fetch = async (input) =>
+			new URL(String(input)).pathname.endsWith("/objects")
+				? Response.json({
+						success: true,
+						result: [{ key: "runs/123/attempts/1/manifest.json" }],
+					})
+				: new Response("unavailable", { status: 503 });
+		await expect(
+			downloadRuns([123], createR2Downloader({}, request), local),
+		).rejects.toThrow("HTTP 503");
+		expect(await readFile(join(directory, "manifest.json"), "utf8")).toBe(
+			original,
+		);
+		expect(await readdir(local)).toEqual(["123"]);
+	});
+
+	test.each([
+		"runs/456/manifest.json",
+		"runs/123/../escape.json",
+		"runs/123/attempts/1/../../escape.json",
+	])("rejects unexpected object key %s", async (key) => {
+		const request: typeof fetch = async () =>
+			Response.json({ success: true, result: [{ key }] });
+		await expect(
+			createR2Downloader({}, request)("runs/123/", await temporaryDirectory()),
+		).rejects.toThrow("Unexpected R2 object key");
+	});
+
+	test("rejects incomplete pagination instead of installing a partial download", async () => {
+		const request: typeof fetch = async () =>
+			Response.json({
+				success: true,
+				result: [],
+				result_info: { is_truncated: true },
+			});
+		await expect(
+			createR2Downloader({}, request)("runs/", await temporaryDirectory()),
+		).rejects.toThrow("without a cursor");
+	});
+
+	test("rejects failed Cloudflare listings", async () => {
+		const request: typeof fetch = async () =>
+			new Response("denied", { status: 403 });
+		await expect(
+			createR2Downloader({}, request)("runs/", await temporaryDirectory()),
+		).rejects.toThrow("HTTP 403");
+	});
+
 	test("downloads selected run prefixes and installs canonical folders", async () => {
 		const remote = await temporaryDirectory();
 		const local = await temporaryDirectory();
