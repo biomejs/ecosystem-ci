@@ -32,7 +32,7 @@ Install Node.js 24, pnpm, `just`, Git, and `unzip`. Run the following commands f
 
 2. Download reports from either R2 or GitHub Actions.
 
-   For R2, install the AWS CLI and configure [R2 access credentials](https://developers.cloudflare.com/r2/examples/aws/aws-cli/) with read access to `biome-ecosystem-ci-reports`. Use `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, or an AWS profile selected with `AWS_PROFILE`. Then download specific GitHub Actions run IDs:
+   For R2, use your existing Wrangler login, or sign in with `pnpm --dir dashboard exec wrangler login`. You can also set `CLOUDFLARE_API_TOKEN` with read access to `biome-ecosystem-ci-reports`. The downloader uses Cloudflare’s API with Wrangler credentials; no AWS CLI or S3 credentials are needed. Download specific GitHub Actions run IDs:
 
    ```sh
    just reports-download <run-id> [<another-run-id>]

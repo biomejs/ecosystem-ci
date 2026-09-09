@@ -2,10 +2,9 @@ import type { TimingStats } from "$lib/timing";
 import type { RepositoryComparison, RunObservation } from "./types";
 
 const MIN_TIMING_PERCENT = 20;
-const MIN_CHECK_CHANGE_MS = 25;
-const MIN_SCANNER_CHANGE_MS = 10;
-const MIN_DIAGNOSTIC_PERCENT = 5;
-const MIN_DIAGNOSTIC_COUNT = 10;
+const MIN_CHECK_CHANGE_MS = 100;
+const MIN_SCANNER_CHANGE_MS = 50;
+const MIN_TIMING_COLOR_CHANGE_MS = 30;
 
 export function percentDelta(
 	base: number | null,
@@ -45,18 +44,32 @@ export function diagnosticDelta(row: RepositoryComparison): number {
 	return diagnosticTotal(row.head) - diagnosticTotal(row.base);
 }
 
-/** the statistic a comparison is judged on; the others are shown alongside it */
+/** the central timing value displayed and used for relative changes */
 export const medianMs = (stats: TimingStats | null): number | null =>
 	stats === null ? null : stats.median;
+
+export function timingDeltaColor(
+	base: TimingStats | null,
+	head: TimingStats | null,
+): string {
+	if (
+		base === null ||
+		head === null ||
+		Math.abs(head.median - base.median) < MIN_TIMING_COLOR_CHANGE_MS
+	) {
+		return deltaColor(null);
+	}
+	return deltaColor(percentDelta(base.median, head.median));
+}
 
 function timingSignal(
 	baseStats: TimingStats | null,
 	headStats: TimingStats | null,
 	minimumChangeMs: number,
 ): number {
-	const base = medianMs(baseStats);
-	const head = medianMs(headStats);
-	if (base === null || head === null) return 0;
+	if (baseStats === null || headStats === null) return 0;
+	const base = baseStats.median;
+	const head = headStats.median;
 	const percentage = percentDelta(base, head);
 	if (
 		percentage === null ||
@@ -65,21 +78,9 @@ function timingSignal(
 	) {
 		return 0;
 	}
-	return Math.sign(head - base);
-}
-
-function diagnosticSignal(row: RepositoryComparison): number {
-	const base = diagnosticTotal(row.base);
-	const head = diagnosticTotal(row.head);
-	const count = head - base;
-	const percentage = relativeDelta(base, head);
-	if (
-		Math.abs(count) < MIN_DIAGNOSTIC_COUNT ||
-		Math.abs(percentage) < MIN_DIAGNOSTIC_PERCENT
-	) {
-		return 0;
-	}
-	return Math.sign(count);
+	if (head > base && headStats.q1 > baseStats.q3) return 1;
+	if (head < base && headStats.q3 < baseStats.q1) return -1;
+	return 0;
 }
 
 export function reviewKind(
@@ -88,7 +89,7 @@ export function reviewKind(
 	const signals = [
 		timingSignal(row.base.check, row.head.check, MIN_CHECK_CHANGE_MS),
 		timingSignal(row.base.scanner, row.head.scanner, MIN_SCANNER_CHANGE_MS),
-		diagnosticSignal(row),
+		Math.sign(row.head.parseDiagnostics - row.base.parseDiagnostics),
 		Math.sign(row.head.panics - row.base.panics),
 	];
 	if (signals.some((signal) => signal > 0)) return "worse";

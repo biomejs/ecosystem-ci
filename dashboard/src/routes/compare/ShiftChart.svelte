@@ -3,7 +3,7 @@
 <script lang="ts">
 import type { TimingStats } from "$lib/timing";
 import { formatMs, formatPct } from "$lib/trends/format";
-import { deltaColor, percentDelta } from "./comparison";
+import { percentDelta, timingDeltaColor } from "./comparison";
 import { landmarkTooltip } from "./landmark-tooltip";
 import { rangeRuler } from "./range-ruler";
 import TimingRuler from "./TimingRuler.svelte";
@@ -73,7 +73,7 @@ const tickAnchor = $derived(
 					width={`${Math.max(1, Math.abs(x(head.median) - x(base.median)))}%`}
 					height="10"
 					rx="2"
-					fill={deltaColor(delta)}
+					fill={timingDeltaColor(base, head)}
 				></rect>
 			</g>
 			<g use:landmarkTooltip={`base median ${formatMs(base.median)}`}>
