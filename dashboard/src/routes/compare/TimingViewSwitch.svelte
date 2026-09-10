@@ -15,7 +15,7 @@ function hrefFor(view: TimingView): string {
 <nav class="flex flex-wrap text-sm" aria-label="Timing chart">
 	{#each TIMING_VIEWS as view (view.key)}
 		<a
-			class={`-ml-px inline-flex min-h-11 items-center border border-hair px-3 py-2 no-underline first:ml-0 ${
+			class={`-ml-px inline-flex min-h-9 items-center border border-hair px-3 py-1 no-underline first:ml-0 first:rounded-l-sm last:rounded-r-sm ${
 				view.key === current
 					? "bg-hair text-ink"
 					: "text-muted hover:text-ink"

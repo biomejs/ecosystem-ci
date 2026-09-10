@@ -35,11 +35,14 @@
 
 @layer base {
 	:root {
+		--select-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%2317181c' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		--select-caret-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 		color-scheme: light;
 	}
 	/* System preference also works when JavaScript is unavailable. */
 	@media (prefers-color-scheme: dark) {
 		:root:not([data-theme="light"]) {
+			--select-caret: var(--select-caret-dark);
 			--color-page: #17181c;
 			--color-surface: #24272f;
 			--color-ink: #ffffff;
@@ -62,6 +65,7 @@
 		}
 	}
 	:root[data-theme="dark"] {
+		--select-caret: var(--select-caret-dark);
 		--color-page: #17181c;
 		--color-surface: #24272f;
 		--color-ink: #ffffff;
@@ -108,16 +112,27 @@
 	}
 	select,
 	button {
-		min-height: 2.75rem;
+		min-height: 2.25rem;
 		max-width: 100%;
-		padding: 0.5rem 0.75rem;
+		padding: 0.25rem 0.75rem;
 		border: 1px solid var(--color-base);
 		border-radius: 0.25rem;
 		color: var(--color-ink);
 		background: var(--color-page);
 	}
 	select {
-		padding-right: 2rem;
+		appearance: none;
+		padding-right: 2.5rem;
+		background-image: var(--select-caret);
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 1rem;
+	}
+	@media (forced-colors: active) {
+		select {
+			appearance: auto;
+			background-image: none;
+		}
 	}
 	button,
 	summary {
