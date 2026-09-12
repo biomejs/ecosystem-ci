@@ -2,7 +2,7 @@
 import type { Repo, Run, ValueKey } from "./data";
 import { seriesRanges, seriesValues } from "./data";
 import { formatDay, formatPct, niceTicks } from "./format";
-import { hover } from "./hover.svelte";
+import { hover, validRunIndex } from "./hover.svelte";
 
 let {
 	runs,
@@ -26,10 +26,8 @@ let width = $state(600);
 let logarithmic = $state(false);
 let relative = $state(false);
 let hoveredSlug = $state<string | null>(null);
-const height = 190;
-const margin = { left: 54, right: 10, top: 8, bottom: 24 };
-const plotWidth = $derived(Math.max(10, width - margin.left - margin.right));
-const plotHeight = height - margin.top - margin.bottom;
+const descriptionId = $props.id();
+const height = 240;
 
 type Range = [number, number] | null;
 
@@ -143,6 +141,17 @@ const ticks = $derived(
 		: niceTicks(domain[0], domain[1], 4),
 );
 const displayFormat = $derived(relative ? formatPct : format);
+const margin = $derived({
+	left: Math.max(
+		72,
+		...ticks.map((tick) => displayFormat(tick).length * 8 + 16),
+	),
+	right: 16,
+	top: 14,
+	bottom: 30,
+});
+const plotWidth = $derived(Math.max(10, width - margin.left - margin.right));
+const plotHeight = $derived(height - margin.top - margin.bottom);
 
 const x = (index: number): number =>
 	margin.left +
@@ -200,16 +209,20 @@ function bandPath(values: (number | null)[], ranges: Range[]): string {
 }
 
 const xTicks = $derived.by(() => {
-	const maxTicks = Math.max(2, Math.min(7, Math.floor(plotWidth / 80)));
+	const maxTicks = Math.max(1, Math.min(7, Math.floor(plotWidth / 90)));
 	if (runs.length <= maxTicks) return runs.map((_, index) => index);
-	const step = Math.ceil((runs.length - 1) / maxTicks);
+	if (maxTicks === 1) return [runs.length - 1];
+	const step = Math.ceil((runs.length - 1) / (maxTicks - 1));
 	const indices: number[] = [];
 	for (let index = runs.length - 1; index >= 0; index -= step)
 		indices.unshift(index);
 	return indices;
 });
 
-const focusIndex = $derived(hover.index ?? runs.length - 1);
+const focusIndex = $derived(
+	validRunIndex(hover.index, runs.length) ?? runs.length - 1,
+);
+const focusRun = $derived(runs[focusIndex]);
 const focusValues = $derived(
 	series.flatMap((item) => {
 		const value = item.values[focusIndex];
@@ -251,6 +264,11 @@ function toggleRelative(event: Event) {
 }
 
 function onpointermove(event: PointerEvent) {
+	if (runs.length === 0) {
+		hover.index = null;
+		hoveredSlug = null;
+		return;
+	}
 	const rect = (event.currentTarget as SVGSVGElement).getBoundingClientRect();
 	const pointerX = event.clientX - rect.left;
 	const pointerY = event.clientY - rect.top;
@@ -296,56 +314,60 @@ function onpointermove(event: PointerEvent) {
 	hoveredSlug = nearestSlug;
 	hover.index = Math.max(0, Math.min(runs.length - 1, index));
 }
-
-function onkeydown(event: KeyboardEvent) {
-	if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-	event.preventDefault();
-	const current = hover.index ?? runs.length - 1;
-	hover.index = Math.max(
-		0,
-		Math.min(runs.length - 1, current + (event.key === "ArrowLeft" ? -1 : 1)),
-	);
-}
 </script>
 
 <section class="border border-hair bg-surface min-w-0 p-3">
 	<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-		<h2 class="font-semibold">{title}</h2>
-		<div class="flex items-center gap-3 text-sm">
-			<label class="inline-flex items-center gap-1.5">
+		<h2 class="text-lg leading-snug font-semibold">{title}</h2>
+		<div class="flex flex-wrap items-center gap-3 text-sm">
+			<label class="inline-flex min-h-11 items-center gap-1.5">
 				<input
+					class="size-4.5 shrink-0 accent-accent"
 					type="checkbox"
 					checked={logarithmic}
 					onchange={toggleLogarithmic}
 				>
 				Log scale
 			</label>
-			<label class="inline-flex items-center gap-1.5">
-				<input type="checkbox" checked={relative} onchange={toggleRelative}>
+			<label class="inline-flex min-h-11 items-center gap-1.5">
+				<input
+					class="size-4.5 shrink-0 accent-accent"
+					type="checkbox"
+					checked={relative}
+					onchange={toggleRelative}
+				>
 				Relative to first
 			</label>
 		</div>
 	</div>
 	<p class="text-muted mb-1 text-sm">
-		{formatDay(runs[focusIndex].startedAt)}
+		{focusRun ? formatDay(focusRun.startedAt) : "No runs"}
 		· {focusRange} · medians; bands and ticks span each run's samples
 	</p>
 	<div class="relative min-w-0 overflow-hidden" bind:clientWidth={width}>
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<svg
 			{width}
 			{height}
 			class="block select-none"
 			role="img"
 			aria-label={`${title} for ${repos.length} repositories over ${runs.length} runs, ${relative ? "relative to first sample" : logarithmic ? "logarithmic scale" : "linear scale"}`}
-			tabindex="0"
+			aria-describedby={descriptionId}
 			{onpointermove}
 			onpointerleave={() => {
-				hover.index = null;
+				hover.index = validRunIndex(hover.pinned, runs.length);
 				hoveredSlug = null;
 			}}
-			{onkeydown}
 		>
+			<title>{title}</title>
+			<desc id={descriptionId}>
+				Each line represents one customer repository. Gaps indicate unavailable
+				observations, not zero. The repository nearest the pointer has a thicker
+				line. Use the run inspector or historical data table for exact values
+				and keyboard access.
+				{#if logarithmic}
+					Non-positive values are omitted on the log scale.
+				{/if}
+			</desc>
 			{#each ticks as tick (tick)}
 				<line
 					x1={margin.left}
@@ -356,7 +378,7 @@ function onkeydown(event: KeyboardEvent) {
 				/>
 				<text
 					x={margin.left - 7}
-					y={y(tick) + 3.5}
+					y={y(tick) + 4.5}
 					text-anchor="end"
 					font-size="var(--text-chart)"
 					fill="var(--color-muted)"
@@ -378,10 +400,10 @@ function onkeydown(event: KeyboardEvent) {
 					d={linePath(item.values)}
 					fill="none"
 					stroke={hue}
-					stroke-width="1.4"
+					stroke-width="1.8"
 					stroke-linejoin="round"
 					stroke-linecap="round"
-					opacity={hoveredSeries ? "0.12" : "0.28"}
+					opacity={hoveredSeries ? "0.3" : "0.8"}
 				>
 					<title>{item.slug}</title>
 				</path>
@@ -391,7 +413,7 @@ function onkeydown(event: KeyboardEvent) {
 				<text
 					x={x(index)}
 					y={height - 5}
-					text-anchor={index === 0 ? "start" : index === runs.length - 1 ? "end" : "middle"}
+					text-anchor={runs.length === 1 ? "middle" : index === 0 ? "start" : index === runs.length - 1 ? "end" : "middle"}
 					font-size="var(--text-chart)"
 					fill="var(--color-muted)"
 				>
@@ -405,7 +427,7 @@ function onkeydown(event: KeyboardEvent) {
 					x2={x(focusIndex)}
 					y1={margin.top}
 					y2={margin.top + plotHeight}
-					stroke="var(--color-ink-2)"
+					stroke="var(--color-base)"
 				/>
 				{#each focusValues as point (point.slug)}
 					{#if point.range !== null && point.range[0] !== point.range[1]}
@@ -468,4 +490,8 @@ function onkeydown(event: KeyboardEvent) {
 			</div>
 		{/if}
 	</div>
+	<p class="text-muted text-sm">
+		Use the run inspector or historical data table for values and keyboard
+		access.
+	</p>
 </section>

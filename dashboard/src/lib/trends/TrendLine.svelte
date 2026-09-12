@@ -2,14 +2,14 @@
 import type { Run } from "./data";
 import { linearDomain } from "./domain";
 import { formatDay, niceTicks } from "./format";
-import { hover } from "./hover.svelte";
+import { hover, validRunIndex } from "./hover.svelte";
 
 let {
 	runs,
 	values,
 	hue,
 	zeroBased = false,
-	height = 80,
+	height = 88,
 	axis = "none",
 	baseline = null,
 	softRelativeSpan = null,
@@ -39,11 +39,12 @@ let {
 } = $props();
 
 let width = $state(300);
+const descriptionId = $props.id();
 const m = $derived({
-	left: 6,
+	left: 8,
 	right: 8,
-	top: 8,
-	bottom: axis === "none" ? 4 : 18,
+	top: 10,
+	bottom: axis === "none" ? 8 : 28,
 });
 const pw = $derived(Math.max(10, width - m.left - m.right));
 const ph = $derived(height - m.top - m.bottom);
@@ -108,48 +109,49 @@ const bandPath = $derived.by(() => {
 
 const xTicks = $derived.by(() => {
 	const n = runs.length;
-	const maxTicks = Math.max(2, Math.min(8, Math.floor(pw / 70)));
+	const maxTicks = Math.max(1, Math.min(8, Math.floor(pw / 90)));
 	if (n <= maxTicks) return runs.map((_, i) => i);
-	const step = Math.ceil((n - 1) / maxTicks);
+	if (maxTicks === 1) return [n - 1];
+	const step = Math.ceil((n - 1) / (maxTicks - 1));
 	const out: number[] = [];
 	for (let i = n - 1; i >= 0; i -= step) out.unshift(i);
 	return out;
 });
 
 const last = $derived(values.length > 0 ? values[values.length - 1] : null);
-const hi = $derived(hover.index);
+const hi = $derived(validRunIndex(hover.index, runs.length));
 const hoverValue = $derived(hi === null ? null : (values[hi] ?? null));
 
 function onpointermove(e: PointerEvent) {
+	if (runs.length === 0) {
+		hover.index = null;
+		return;
+	}
 	const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
 	const px = e.clientX - rect.left;
 	const i = Math.round(((px - m.left) / pw) * (runs.length - 1));
 	hover.index = Math.max(0, Math.min(runs.length - 1, i));
 }
-function onkeydown(e: KeyboardEvent) {
-	if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-	e.preventDefault();
-	const cur = hover.index ?? runs.length - 1;
-	hover.index = Math.max(
-		0,
-		Math.min(runs.length - 1, cur + (e.key === "ArrowLeft" ? -1 : 1)),
-	);
-}
 </script>
 
 <div class="min-w-0 overflow-hidden" bind:clientWidth={width}>
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 	<svg
 		{width}
 		{height}
 		class="block select-none"
 		role="img"
 		aria-label={ariaLabel}
-		tabindex="0"
+		aria-describedby={descriptionId}
 		{onpointermove}
-		onpointerleave={() => (hover.index = null)}
-		{onkeydown}
+		onpointerleave={() => (hover.index = validRunIndex(hover.pinned, runs.length))}
 	>
+		<title>{ariaLabel}</title>
+		<desc id={descriptionId}>
+			Runs progress from left to right. Timing lines show medians, with bands
+			covering the minimum to maximum samples. Gaps indicate unavailable
+			observations, not zero. Use the run inspector or historical data table for
+			exact values and keyboard access.
+		</desc>
 		{#each ticks as t (t)}
 			<line
 				x1={m.left}
@@ -184,7 +186,7 @@ function onkeydown(e: KeyboardEvent) {
 				<text
 					x={x(i)}
 					y={height - 5}
-					text-anchor={i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle"}
+					text-anchor={runs.length === 1 ? "middle" : i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle"}
 					font-size="var(--text-chart)"
 					fill="var(--color-muted)"
 				>
@@ -214,7 +216,7 @@ function onkeydown(e: KeyboardEvent) {
 			<circle cx={x(values.length - 1)} cy={y(last)} r="3.5" fill={hue} />
 		{/if}
 
-		{#if hi !== null && hi < runs.length}
+		{#if hi !== null}
 			<line
 				x1={x(hi)}
 				x2={x(hi)}

@@ -1,3 +1,4 @@
+import axe from "axe-core";
 import { afterEach, expect, test } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-svelte";
@@ -56,6 +57,9 @@ const data: PageData = {
 
 afterEach(() => {
 	hover.index = null;
+	hover.pinned = null;
+	delete document.documentElement.dataset.theme;
+	document.documentElement.style.fontSize = "";
 });
 
 async function settleLayout() {
@@ -82,7 +86,7 @@ test("hovering a chart does not shift the dashboard layout", async () => {
 
 		const elements = Array.from(
 			main.querySelectorAll(
-				"header, section, [aria-live], section[aria-label] > div > div, svg",
+				"header, section, [role=status], table th, table td, svg",
 			),
 		);
 		expect(elements.length).toBeGreaterThan(20);
@@ -201,4 +205,95 @@ test("overview lines highlight the hovered repository and clear away from lines"
 		}
 		svg.dispatchEvent(new PointerEvent("pointerleave"));
 	}
+});
+
+test("themes and semantic tables remain accessible at mobile and desktop widths", async () => {
+	for (const theme of ["light", "dark"]) {
+		document.documentElement.dataset.theme = theme;
+		for (const width of [320, 1440]) {
+			await page.viewport(width, 1000);
+			const screen = await render(Dashboard, { data });
+			await settleLayout();
+			const main = screen.getByRole("main").element();
+			expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+				window.innerWidth,
+			);
+			expect(main.querySelectorAll("svg[tabindex]")).toHaveLength(0);
+			expect(main.querySelectorAll("table thead th[scope=col]")).toHaveLength(
+				14,
+			);
+			expect((await axe.run(main)).violations).toEqual([]);
+			await screen.unmount();
+		}
+	}
+});
+
+test("run inspection preserves sample statistics and clears on a different branch", async () => {
+	const screen = await render(Dashboard, { data });
+	const inspect = screen.getByRole("combobox", {
+		name: "Inspect run",
+		exact: true,
+	});
+	await inspect.selectOptions("0");
+	await expect
+		.element(screen.getByRole("status"))
+		.toHaveTextContent("Inspecting run #1");
+	await expect
+		.element(screen.getByRole("button", { name: "Previous run" }))
+		.toBeDisabled();
+	await screen.getByRole("button", { name: "Next run" }).click();
+	await expect.element(inspect).toHaveValue("1");
+	const svg = screen
+		.getByRole("img", {
+			name: "Check time for biomejs/biome over 3 runs",
+			exact: true,
+		})
+		.element();
+	svg.dispatchEvent(
+		new PointerEvent("pointermove", {
+			bubbles: true,
+			clientX: svg.getBoundingClientRect().right - 1,
+		}),
+	);
+	await expect.poll(() => hover.index).toBe(2);
+	svg.dispatchEvent(new PointerEvent("pointerleave"));
+	await expect.poll(() => hover.index).toBe(1);
+	await screen.getByText("Historical data", { exact: true }).click();
+	const history = screen
+		.getByRole("region", { name: "Historical observations", exact: true })
+		.element();
+	expect(history.textContent).toContain("1,234 ms median");
+	expect(history.textContent).toMatch(/Min\s+987\.2\s+ms/);
+	expect(history.textContent).toContain("3 samples");
+	await screen
+		.getByRole("combobox", { name: "Customer repository", exact: true })
+		.selectOptions("withastro/astro");
+	expect(history.textContent).toContain(
+		"Missing repository data: no report received.",
+	);
+	expect(
+		(await axe.run(screen.getByRole("main").element())).violations,
+	).toEqual([]);
+	await screen.rerender({
+		data: {
+			...data,
+			branch: "other",
+			branches: ["other"],
+			runs: [{ ...runs[0], biomeBranch: "other" }],
+		},
+	});
+	await expect.element(inspect).toHaveValue("");
+	await expect.poll(() => hover.pinned).toBeNull();
+});
+
+test("an empty history still exposes the page heading and empty state", async () => {
+	const screen = await render(Dashboard, {
+		data: { runs: [], history: [], branches: [], branch: null },
+	});
+	await expect
+		.element(screen.getByRole("heading", { level: 1 }))
+		.toHaveTextContent("Ecosystem CI trends");
+	await expect
+		.element(screen.getByText("No runs have been stored."))
+		.toBeVisible();
 });

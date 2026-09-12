@@ -1,102 +1,62 @@
 @import "tailwindcss";
 
-/* Dark only. Metric hues validated for contrast and colour-vision deficiency on #121211. */
 @theme static {
-	--font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-
-	--color-page: #121211;
-	--color-surface: #1a1a19;
-	--color-ink: #f2f1ec;
-	--color-ink-2: #c3c2b7;
-	--color-muted: #898781;
-	--color-hair: #2c2c2a;
-	--color-base: #3d3d3a;
-	--color-blue: #3987e5;
-	--color-aqua: #199e70;
-	--color-orange: #d95926;
-	--color-violet: #a99ff0;
-	--color-sev-error: #b5b4ad;
-	--color-sev-warning: #6e6d67;
-	--color-sev-info: #3a3a37;
-	--color-worse: #e66767;
-	--color-better: #2fb344;
-
+	--font-sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+	--color-page: light-dark(#ffffff, #17181c);
+	--color-surface: light-dark(#f5f6f8, #24272f);
+	--color-ink: light-dark(#17181c, #ffffff);
+	--color-ink-2: light-dark(#353841, #c0c2c7);
+	--color-muted: light-dark(#545861, #a0a3ae);
+	--color-hair: light-dark(#c0c2c7, #545861);
+	--color-base: light-dark(#737782, #888b96);
+	--color-accent: light-dark(#0065da, #60a5fa);
+	--color-accent-low: light-dark(#c2d9fa, #131e4f);
+	--color-blue: light-dark(#0065da, #60a5fa);
+	--color-aqua: light-dark(#087b61, #4fc9a4);
+	--color-orange: light-dark(#b34212, #f6a16e);
+	--color-violet: light-dark(#6941bf, #b5a0f5);
+	--color-sev-error: light-dark(#353841, #eceef2);
+	--color-sev-warning: light-dark(#646872, #b0b4bf);
+	--color-sev-info: light-dark(#828691, #818795);
+	--color-worse: light-dark(#b42335, #ff929d);
+	--color-better: light-dark(#087443, #6ad5a0);
+	--text-xs: 0.875rem;
+	--text-xs--line-height: 1.5;
+	--text-page-heading: clamp(1.75rem, 3vw, 2rem);
+	--text-page-heading--line-height: 1.2;
+	--text-brand: 1.375rem;
+	--tracking-page-heading: -0.035em;
 	/* SVG labels use chart coordinates, independent of the HTML root size. */
-	--text-chart: 10.5px;
+	--text-chart: 13px;
 	--text-chart-detail: 8px;
-	--tracking-eyebrow: 0.04em;
-
-	--spacing-dashboard-table: 82.5rem;
-
-	/* repository, four metrics, severity */
-	--grid-template-columns-table: 12rem repeat(4, minmax(0, 1fr))
-		minmax(0, 1.2fr);
-	/* value column plus a fixed sparkline column */
-	--grid-template-columns-metric: minmax(0, 1fr) 5.5rem;
-	--grid-template-columns-severity: minmax(0, 1fr) 6rem;
-	/* repository, two timing columns, diagnostics and panics */
+	--container-dashboard: 96rem;
+	--spacing-page-gutter: clamp(1rem, 3vw, 2.5rem);
+	--spacing-dashboard-table: 84rem;
 	--grid-template-columns-scan: minmax(8rem, 0.7fr) repeat(2, minmax(9rem, 1fr))
 		minmax(8rem, 0.6fr);
-	/* baseline, arrow, compared, submit */
 	--grid-template-columns-picker: minmax(0, 1fr) auto minmax(0, 1fr) auto;
 }
 
 @layer base {
 	:root {
-		color-scheme: dark;
+		@apply min-h-screen bg-page font-sans text-base text-ink scheme-light-dark;
 	}
-
-	html {
-		min-height: 100vh;
-		background: var(--color-page);
-		color: var(--color-ink);
-		font-family: var(--font-sans);
-		/* 14px at the default browser size; respects user font preferences. */
-		font-size: 87.5%;
-		line-height: 1.35;
+	:root[data-theme="light"] {
+		@apply scheme-light;
 	}
-
-	select {
-		color: inherit;
-		background: var(--color-surface);
+	:root[data-theme="dark"] {
+		@apply scheme-dark;
 	}
-
 	a {
-		color: inherit;
-		text-decoration: underline;
-		text-decoration-color: var(--color-base);
-		text-underline-offset: 3px;
+		@apply text-accent underline underline-offset-4 hover:decoration-2;
 	}
-
-	a:hover {
-		text-decoration-color: var(--color-ink);
+	:focus-visible {
+		@apply outline-3 outline-offset-3 outline-accent;
 	}
-
-	a:focus-visible,
-	select:focus-visible,
-	[tabindex]:focus-visible {
-		outline: 2px solid var(--color-ink);
-		outline-offset: 2px;
+	::selection {
+		@apply bg-accent-low text-ink;
 	}
-}
-
-/* small uppercase label above a control or column */
-@utility eyebrow {
-	font-size: var(--text-sm);
-	line-height: var(--text-sm--line-height);
-	font-weight: 600;
-	letter-spacing: var(--tracking-eyebrow);
-	text-transform: uppercase;
-	color: var(--color-muted);
-}
-
-/* legend swatch for a line metric */
-@utility key {
-	display: inline-block;
-	width: 14px;
-	height: 2px;
-	vertical-align: middle;
-	border-radius: 1px;
 }
 
 /* Keep the sticky scrollbar one h-5 above the viewport bottom. */
