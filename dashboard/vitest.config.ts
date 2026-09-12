@@ -9,6 +9,10 @@ export default mergeConfig(
 		test: {
 			include: ["src/**/*.browser.test.ts"],
 			browser: {
+				commands: {
+					setColorScheme: ({ page }, colorScheme: "light" | "dark" | null) =>
+						page.emulateMedia({ colorScheme }),
+				},
 				enabled: true,
 				provider: playwright(),
 				headless: true,

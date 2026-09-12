@@ -1,5 +1,7 @@
 <script lang="ts">
 import { page } from "$app/state";
+import Button from "$lib/Button.svelte";
+import Select from "$lib/Select.svelte";
 import { formatDateTime, shortSha } from "$lib/trends/format";
 import type { PageData } from "./$types";
 import ComparisonTable from "./ComparisonTable.svelte";
@@ -27,76 +29,84 @@ const runLabel = (run: (typeof data.runs)[number]): string =>
 	</div>
 {/snippet}
 
-<main id="main-content" tabindex="-1" class="page-shell">
+<main
+	id="main-content"
+	tabindex="-1"
+	class="mx-auto w-full max-w-dashboard px-page-gutter pt-6 pb-12 focus:outline-none sm:pt-8"
+>
 	<header class="mb-6">
 		<a class="text-muted text-sm" href="/">← Ecosystem CI trends</a>
-		<h1 class="mt-3 mb-2">Compare runs</h1>
+		<h1 class="mt-3 mb-2 text-page-heading font-semibold tracking-page-heading">
+			Compare runs
+		</h1>
 		<p class="text-ink-2">
 			Compare customer repository results between two Biome runs.
 		</p>
 	</header>
 	{#if data.base && data.head}
 		<form
-			class="panel grid grid-cols-1 items-start gap-6 p-4 lg:grid-cols-picker"
+			class="grid grid-cols-1 items-start gap-6 rounded-sm border border-hair bg-surface p-4 lg:grid-cols-picker"
 			method="GET"
 		>
 			<div class="min-w-0">
-				<label class="eyebrow mb-1.5 block" for="baseline-run"
+				<label
+					class="mb-1.5 block text-sm font-semibold text-muted"
+					for="baseline-run"
 					>Baseline run</label
 				>
-				<select
+				<Select
 					id="baseline-run"
-					class="block w-full min-w-0"
+					class="w-full"
 					name="base"
+					value={data.base.githubRunId}
 					aria-describedby="baseline-metadata"
 				>
 					{#each data.runs as run (run.githubRunId)}
-						<option
-							value={run.githubRunId}
-							selected={run.githubRunId === data.base.githubRunId}
-						>
+						<option value={run.githubRunId}>
 							{runLabel(run)}
 						</option>
 					{/each}
-				</select>
+				</Select>
 				{@render runSummary(data.base, "baseline-metadata")}
 			</div>
 			<span class="mt-9 hidden text-muted text-xl lg:block" aria-hidden="true"
 				>→</span
 			>
 			<div class="min-w-0">
-				<label class="eyebrow mb-1.5 block" for="compared-run"
+				<label
+					class="mb-1.5 block text-sm font-semibold text-muted"
+					for="compared-run"
 					>Compared run</label
 				>
-				<select
+				<Select
 					id="compared-run"
-					class="block w-full min-w-0"
+					class="w-full"
 					name="head"
+					value={data.head.githubRunId}
 					aria-describedby="compared-metadata"
 				>
 					{#each data.runs as run (run.githubRunId)}
-						<option
-							value={run.githubRunId}
-							selected={run.githubRunId === data.head.githubRunId}
-						>
+						<option value={run.githubRunId}>
 							{runLabel(run)}
 						</option>
 					{/each}
-				</select>
+				</Select>
 				{@render runSummary(data.head, "compared-metadata")}
 			</div>
 			<input type="hidden" name="view" value={timingView}>
-			<button class="button-primary w-full lg:mt-7 lg:w-auto" type="submit">
+			<Button primary class="w-full lg:mt-7 lg:w-auto" type="submit">
 				Compare
-			</button>
+			</Button>
 		</form>
 	{/if}
 	{#if !data.base || !data.head}
-		<p class="panel mt-6 p-5">
+		<p class="mt-6 rounded-sm border border-hair bg-surface p-5">
 			At least two stored runs are needed for a comparison.
 		</p>
 	{:else if data.comparisons.length === 0}
-		<p class="panel mt-6 p-5">No shared repository results.</p>
+		<p class="mt-6 rounded-sm border border-hair bg-surface p-5">
+			No shared repository results.
+		</p>
 	{:else}
 		<ComparisonTable comparisons={data.comparisons} {timingView} />
 	{/if}

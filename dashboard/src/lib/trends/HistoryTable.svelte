@@ -1,4 +1,5 @@
 <script lang="ts">
+import Select from "$lib/Select.svelte";
 import StickyHorizontalScroll from "$lib/StickyHorizontalScroll.svelte";
 import { isTime, METRICS, type Repo, type Run, SEVERITIES } from "./data";
 import { formatDateTime, shortSha } from "./format";
@@ -10,36 +11,50 @@ const repo = $derived(
 );
 </script>
 
-<details class="panel history-details">
-	<summary>Historical data</summary>
+<details class="mt-6 rounded-sm border border-hair bg-surface p-4">
+	<summary class="min-h-11 cursor-pointer py-2 font-semibold">
+		Historical data
+	</summary>
 	<p class="text-muted mb-3">
 		Timing statistics are computed from each run's samples on this Biome branch.
 		Missing repository data is not zero; unavailable timings are shown
 		separately.
 	</p>
 	{#if repo}
-		<label class="field mb-3">
-			<span>Customer repository</span>
-			<select
+		<label
+			for="history-repository"
+			class="mb-3 grid min-w-0 max-w-full grid-cols-1 gap-1.5"
+		>
+			<span class="text-sm font-semibold text-ink-2">Customer repository</span>
+			<Select
+				id="history-repository"
 				value={repo.slug}
 				onchange={(event) => { slug = event.currentTarget.value; }}
 			>
 				{#each repos as candidate (candidate.slug)}
 					<option value={candidate.slug}>{candidate.slug}</option>
 				{/each}
-			</select>
+			</Select>
 		</label>
 		<StickyHorizontalScroll label="Historical observations">
-			<table class="history-table">
-				<caption>
+			<table class="w-full border-collapse text-sm">
+				<caption class="py-4 text-left text-ink-2">
 					{repo.slug}: check and scanner times, parse diagnostics, panics, and
 					rule diagnostics by severity. Oldest run first.
 				</caption>
 				<thead>
 					<tr>
-						<th scope="col">Run / date (UTC)</th>
+						<th
+							scope="col"
+							class="border-b border-hair p-3 text-left font-semibold"
+						>
+							Run / date (UTC)
+						</th>
 						{#each [...METRICS, ...SEVERITIES] as metric (metric.key)}
-							<th scope="col">
+							<th
+								scope="col"
+								class="border-b border-hair p-3 text-left font-semibold"
+							>
 								{metric.label}
 								{SEVERITIES.includes(metric) ? " (rule diagnostics)" : ""}
 							</th>
@@ -50,7 +65,10 @@ const repo = $derived(
 					{#each runs as run, index (run.id)}
 						{const cell = $derived(repo.cells[index])}
 						<tr>
-							<th scope="row">
+							<th
+								scope="row"
+								class="border-b border-hair p-3 text-left font-semibold"
+							>
 								<a class="font-mono" href={run.url}
 									>#{run.id}/ {shortSha(run.sha)}</a
 								><span class="text-muted block"
@@ -58,7 +76,7 @@ const repo = $derived(
 								>
 							</th>
 							{#if !cell || cell.missing}
-								<td colspan="7">
+								<td colspan="7" class="border-b border-hair p-3 text-left">
 									Missing repository data: no report received.
 								</td>
 							{:else}
@@ -71,7 +89,7 @@ const repo = $derived(
 												? cell.scanner
 												: null,
 									)}
-									<td>
+									<td class="border-b border-hair p-3 text-left tabular-nums">
 										{value === null ? "Not reported" : isTime(metric.key) ? `${value.toLocaleString("en-US", { maximumFractionDigits: 6 })} ms median` : metric.format(value)}
 										{#if stats}
 											<span class="text-muted block"

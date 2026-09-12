@@ -1,4 +1,6 @@
 <script lang="ts">
+import Button from "$lib/Button.svelte";
+import Select from "$lib/Select.svelte";
 import StickyHorizontalScroll from "$lib/StickyHorizontalScroll.svelte";
 import type { TimingStats } from "$lib/timing";
 import {
@@ -154,16 +156,26 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 	</div>
 {/snippet}
 
-<main id="main-content" tabindex="-1" class="page-shell">
+<main
+	id="main-content"
+	tabindex="-1"
+	class="mx-auto w-full max-w-dashboard px-page-gutter pt-6 pb-12 focus:outline-none sm:pt-8"
+>
 	{#if runs.length === 0}
-		<h1>Ecosystem CI trends</h1>
-		<p class="panel mt-3 p-4">No runs have been stored.</p>
+		<h1 class="text-page-heading font-semibold tracking-page-heading">
+			Ecosystem CI trends
+		</h1>
+		<p class="mt-3 rounded-sm border border-hair bg-surface p-4">
+			No runs have been stored.
+		</p>
 	{:else}
-		<header class="page-heading">
-			<div>
-				<p class="eyebrow mb-3">Branch history</p>
-				<h1>Ecosystem CI trends</h1>
-				<p class="text-ink-2">
+		<header class="mb-6 flex flex-wrap items-end justify-between gap-6">
+			<div class="min-w-0">
+				<p class="mb-3 text-sm font-semibold text-muted">Branch history</p>
+				<h1 class="text-page-heading font-semibold tracking-page-heading">
+					Ecosystem CI trends
+				</h1>
+				<p class="mt-3 max-w-prose wrap-anywhere text-ink-2">
 					Biome <span class="font-mono">{dataset.branch}</span> ·
 					{dataset.repos.length}
 					repositories · last {runs.length} runs · latest
@@ -173,17 +185,25 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				</p>
 			</div>
 			<form method="GET" class="flex min-w-0 flex-wrap items-end gap-2">
-				<label class="field">
-					<span>Biome branch</span>
-					<select class="max-w-64" name="branch">
+				<label
+					for="biome-branch"
+					class="grid min-w-0 max-w-full grid-cols-1 gap-1.5"
+				>
+					<span class="text-sm font-semibold text-ink-2">Biome branch</span>
+					<Select
+						id="biome-branch"
+						class="max-w-64"
+						name="branch"
+						value={data.branch}
+					>
 						{#each data.branches as branch (branch)}
-							<option value={branch} selected={branch === data.branch}>
+							<option value={branch}>
 								{branch}
 							</option>
 						{/each}
-					</select>
+					</Select>
 				</label>
-				<button class="button-primary" type="submit">View branch</button>
+				<Button primary type="submit">View branch</Button>
 			</form>
 		</header>
 
@@ -208,11 +228,17 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 			/>
 		</div>
 
-		<section aria-label="Repository inspection" class="panel mb-6 p-4">
-			<div class="toolbar">
-				<label class="field"
-					><span>Inspect run</span>
-					<select
+		<section
+			aria-label="Repository inspection"
+			class="mb-6 rounded-sm border border-hair bg-surface p-4"
+		>
+			<div class="mb-4 flex flex-wrap items-end gap-x-6 gap-y-4">
+				<label
+					for="inspect-run"
+					class="grid w-full min-w-0 max-w-full grid-cols-1 gap-1.5 sm:w-auto"
+					><span class="text-sm font-semibold text-ink-2">Inspect run</span>
+					<Select
+						id="inspect-run"
 						value={pinnedIndex ?? ""}
 						onchange={(event) => inspectRun(event.currentTarget.value === "" ? null : Number(event.currentTarget.value))}
 						aria-describedby="inspector-help"
@@ -224,39 +250,51 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 								UTC / {shortSha(run.sha)} / #{run.id}
 							</option>
 						{/each}
-					</select>
+					</Select>
 				</label>
 				<div class="flex flex-wrap gap-2">
-					<button
+					<Button
 						type="button"
 						disabled={pinnedIndex === 0 || runs.length < 2}
 						onclick={() => inspectRun((pinnedIndex ?? runs.length - 1) - 1)}
 					>
 						Previous run
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
 						disabled={pinnedIndex === null || pinnedIndex === runs.length - 1}
 						onclick={() => inspectRun((pinnedIndex ?? runs.length - 1) + 1)}
 					>
 						Next run
-					</button>
+					</Button>
 				</div>
-				<label class="field"
-					><span>Change threshold</span>
-					<select bind:value={threshold} aria-describedby="threshold-help">
+				<label
+					for="change-threshold"
+					class="grid w-full min-w-0 max-w-full grid-cols-1 gap-1.5 sm:w-auto"
+					><span class="text-sm font-semibold text-ink-2"
+						>Change threshold</span
+					>
+					<Select
+						id="change-threshold"
+						bind:value={threshold}
+						aria-describedby="threshold-help"
+					>
 						<option value={2}>2 standard deviations</option>
 						<option value={3}>3 standard deviations</option>
 						<option value={5}>5 standard deviations</option>
-					</select>
+					</Select>
 				</label>
-				<label class="field"
-					><span>Recent regression window</span>
-					<select bind:value={recentRuns}>
+				<label
+					for="recent-runs"
+					class="grid w-full min-w-0 max-w-full grid-cols-1 gap-1.5 sm:w-auto"
+					><span class="text-sm font-semibold text-ink-2"
+						>Recent regression window</span
+					>
+					<Select id="recent-runs" bind:value={recentRuns}>
 						<option value={1}>Latest run</option>
 						<option value={3}>Last 3 runs</option>
 						<option value={5}>Last 5 runs</option>
-					</select>
+					</Select>
 				</label>
 			</div>
 			<p id="inspector-help" class="text-muted text-sm">
@@ -276,7 +314,7 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				class:invisible={!hovered}
 				aria-hidden={!hovered}
 			>
-				<span class="eyebrow">Run</span
+				<span class="text-sm font-semibold text-muted">Run</span
 				><span class="font-mono">{shortSha((hovered ?? latest).sha)}</span>
 				<span class="text-ink-2"
 					>{formatDateTime((hovered ?? latest).startedAt)}
@@ -302,8 +340,11 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 			</div>
 		</div>
 
-		<StickyHorizontalScroll class="panel" label="Repository metrics">
-			<table class="metrics-table">
+		<StickyHorizontalScroll
+			class="rounded-sm border border-hair bg-surface"
+			label="Repository metrics"
+		>
+			<table class="w-full min-w-dashboard-table table-fixed border-collapse">
 				<caption class="sr-only">
 					Repository trends for Biome branch {dataset.branch}. Values show
 					{hovered ? `run #${hovered.id}` : "the latest available observations"}.
@@ -312,19 +353,32 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 				</caption>
 				<thead>
 					<tr>
-						<th scope="col">Customer repository</th>
+						<th
+							scope="col"
+							class="w-52 border-b border-hair p-4 text-left align-top text-sm font-semibold"
+						>
+							Customer repository
+						</th>
 						{#each METRICS as m (m.key)}
-							<th scope="col">
+							<th
+								scope="col"
+								class="border-b border-l border-hair p-4 text-left align-top text-sm font-semibold"
+							>
 								<div class="flex items-center gap-2">
-									<span class="key" style:background={m.hue}></span
-									><span>{m.label}</span
+									<span
+										class="inline-block h-0.75 w-4 shrink-0 rounded-xs align-middle"
+										style:background={m.hue}
+									></span><span>{m.label}</span
 									><span class="text-muted ml-auto whitespace-nowrap"
 										>{hovered ? "at run" : "latest · Δ"}</span
 									>
 								</div>
 							</th>
 						{/each}
-						<th scope="col">
+						<th
+							scope="col"
+							class="border-b border-l border-hair p-4 text-left align-top text-sm font-semibold"
+						>
 							<div class="flex flex-col gap-2" title={SEVERITY_NOTE}>
 								<span>By severity</span
 								><span class="flex flex-wrap gap-1.5 text-ink-2">
@@ -346,8 +400,15 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 						{const repo = $derived(row.repo)}
 						{const lastRow = $derived(ri === rows.length - 1)}
 						{const divider = $derived(ri === firstQuiet && ri > 0)}
-						<tr class:quiet-divider={divider}>
-							<th scope="row">
+						<tr
+							class="group"
+							class:border-t-2={divider}
+							class:border-t-base={divider}
+						>
+							<th
+								scope="row"
+								class="border-b border-hair p-4 text-left align-middle wrap-anywhere font-medium group-last:border-b-0"
+							>
 								<a
 									class="wrap-anywhere font-medium"
 									href={`https://github.com/${repo.slug}`}
@@ -363,8 +424,10 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 								{const vals = $derived(seriesValues(repo, m.key))}
 								{const stats = $derived(seriesStats(repo, m.key))}
 								{const f = $derived(findingFor(repo, m.key))}
-								<td>
-									<div class="metric-cell">
+								<td
+									class="border-b border-l border-hair p-4 text-left align-middle group-last:border-b-0"
+								>
+									<div class="grid grid-cols-1 gap-3">
 										<TrendLine
 											{runs}
 											values={vals}
@@ -399,8 +462,10 @@ const firstQuiet = $derived(rows.findIndex((r) => r.regressions.length === 0));
 							{const hoverCell = $derived(
 								focusIndex === null ? null : repo.cells[focusIndex],
 							)}
-							<td>
-								<div class="severity-cell">
+							<td
+								class="border-b border-l border-hair p-4 text-left align-middle group-last:border-b-0"
+							>
+								<div class="grid grid-cols-1 gap-3">
 									<StackedArea
 										{runs}
 										layers={SEVERITIES.map((s) => ({ key: s.key, label: s.label, hue: s.hue, values: seriesValues(repo, s.key) }))}

@@ -25,7 +25,7 @@ const delta = $derived(percentDelta(medianMs(base), medianMs(head)));
 </script>
 
 <dl class="min-w-0 tabular-nums">
-	<dt class="eyebrow mb-1 block">{label}</dt>
+	<dt class="mb-1 block text-sm font-semibold text-muted">{label}</dt>
 	<dd>
 		<strong class="block font-semibold"
 			>{base === null ? "Not reported" : formatMs(base.median)}

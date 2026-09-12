@@ -318,18 +318,24 @@ function onpointermove(event: PointerEvent) {
 
 <section class="border border-hair bg-surface min-w-0 p-3">
 	<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-		<h2 class="font-semibold">{title}</h2>
+		<h2 class="text-lg leading-snug font-semibold">{title}</h2>
 		<div class="flex flex-wrap items-center gap-3 text-sm">
-			<label class="inline-flex items-center gap-1.5">
+			<label class="inline-flex min-h-11 items-center gap-1.5">
 				<input
+					class="size-4.5 shrink-0 accent-accent"
 					type="checkbox"
 					checked={logarithmic}
 					onchange={toggleLogarithmic}
 				>
 				Log scale
 			</label>
-			<label class="inline-flex items-center gap-1.5">
-				<input type="checkbox" checked={relative} onchange={toggleRelative}>
+			<label class="inline-flex min-h-11 items-center gap-1.5">
+				<input
+					class="size-4.5 shrink-0 accent-accent"
+					type="checkbox"
+					checked={relative}
+					onchange={toggleRelative}
+				>
 				Relative to first
 			</label>
 		</div>

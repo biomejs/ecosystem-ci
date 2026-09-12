@@ -62,7 +62,7 @@ test("both timing views retain accessible charts and labelled metrics in both th
 					.toBeVisible();
 				const main = screen.getByRole("main").element();
 				expect(main.querySelector('input[name="view"]')).toHaveValue(view);
-				expect(main.querySelectorAll("svg")).toHaveLength(2);
+				expect(main.querySelectorAll('svg[role="img"]')).toHaveLength(2);
 				expect(main.querySelectorAll("dt")).toHaveLength(5);
 				expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
 					window.innerWidth,
@@ -95,10 +95,33 @@ test("missing timings stay unavailable while diagnostics remain comparable", asy
 		},
 	});
 	expect(
-		screen.getByRole("main").element().querySelectorAll("svg"),
+		screen.getByRole("main").element().querySelectorAll('svg[role="img"]'),
 	).toHaveLength(0);
 	expect(
 		screen.getByRole("region", { name: "Repository comparison" }).element()
 			.textContent,
 	).toContain("Not reported");
+});
+
+test("run selects follow loaded values and submit their native form values", async () => {
+	const screen = await render(Compare, { data });
+	const base = screen.getByRole("combobox", {
+		name: "Baseline run",
+		exact: true,
+	});
+	const head = screen.getByRole("combobox", {
+		name: "Compared run",
+		exact: true,
+	});
+	await expect.element(base).toHaveValue("1");
+	await expect.element(head).toHaveValue("2");
+	await screen.rerender({ data: { ...data, base: runs[1], head: runs[0] } });
+	await expect.element(base).toHaveValue("2");
+	await expect.element(head).toHaveValue("1");
+	await base.selectOptions("1");
+	const form = base.element().closest("form");
+	if (!form) throw new Error("Missing comparison form");
+	const values = new FormData(form);
+	expect(values.get("base")).toBe("1");
+	expect(values.get("head")).toBe("1");
 });

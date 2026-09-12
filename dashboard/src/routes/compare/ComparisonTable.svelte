@@ -68,7 +68,7 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 <section aria-label="Repository comparison">
 	<header class="my-6 flex flex-wrap items-center justify-between gap-4">
 		<div>
-			<h2 class="font-semibold">Repository comparison</h2>
+			<h2 class="text-lg leading-snug font-semibold">Repository comparison</h2>
 			<p class="mt-2 text-ink-2 text-sm">
 				Values show baseline → compared run. Only repositories with reports in
 				both runs are included.
@@ -90,7 +90,7 @@ const dotTone: Record<ReturnType<typeof reviewKind>, string> = {
 			</div>
 		</div>
 	</header>
-	<div class="panel">
+	<div class="rounded-sm border border-hair bg-surface">
 		{#each rows as row (row.repositorySlug)}
 			{const kind = $derived(reviewKind(row))}
 			{const diagnostics = $derived(diagnosticDelta(row))}
