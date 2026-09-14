@@ -222,7 +222,6 @@ const xTicks = $derived.by(() => {
 const focusIndex = $derived(
 	validRunIndex(hover.index, runs.length) ?? runs.length - 1,
 );
-const focusRun = $derived(runs[focusIndex]);
 const focusValues = $derived(
 	series.flatMap((item) => {
 		const value = item.values[focusIndex];
@@ -238,12 +237,24 @@ const focusValues = $derived(
 		];
 	}),
 );
-const focusRange = $derived.by(() => {
-	if (focusValues.length === 0) return "no reports";
-	const values = focusValues.map((item) => item.value);
-	const noun = focusValues.length === 1 ? "report" : "reports";
-	return `${focusValues.length} ${noun} · ${displayFormat(Math.min(...values))} to ${displayFormat(Math.max(...values))}`;
-});
+const summaries = $derived(
+	runs.map((run, index) => {
+		const values = series
+			.map((item) => item.values[index])
+			.filter(
+				(value): value is number =>
+					value !== null && value !== undefined && (!logarithmic || value > 0),
+			);
+		const range =
+			values.length === 0
+				? "no reports"
+				: `${values.length} ${values.length === 1 ? "report" : "reports"} · ${displayFormat(Math.min(...values))} to ${displayFormat(Math.max(...values))}`;
+		return {
+			id: run.id,
+			text: `${formatDay(run.startedAt)} · ${range} · medians; bands and ticks span each run's samples`,
+		};
+	}),
+);
 
 function pointTitle(point: (typeof focusValues)[number]): string {
 	const range =
@@ -340,10 +351,22 @@ function onpointermove(event: PointerEvent) {
 			</label>
 		</div>
 	</div>
-	<p class="text-muted mb-1 text-sm">
-		{focusRun ? formatDay(focusRun.startedAt) : "No runs"}
-		· {focusRange} · medians; bands and ticks span each run's samples
-	</p>
+	<!-- Reserve the tallest wrapped summary so hovering never moves the chart. -->
+	<div class="mb-1 grid text-muted text-sm">
+		{#each summaries as summary, index (summary.id)}
+			<p
+				class="col-start-1 row-start-1"
+				class:invisible={index !== focusIndex}
+				aria-hidden={index !== focusIndex}
+			>
+				{summary.text}
+			</p>
+		{:else}
+			<p>
+				No runs · no reports · medians; bands and ticks span each run's samples
+			</p>
+		{/each}
+	</div>
 	<div class="relative min-w-0 overflow-hidden" bind:clientWidth={width}>
 		<svg
 			{width}

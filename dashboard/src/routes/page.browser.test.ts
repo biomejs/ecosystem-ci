@@ -70,66 +70,78 @@ async function settleLayout() {
 	});
 }
 
-test("hovering a chart does not shift the dashboard layout", async () => {
-	const charts = [
-		"Check time across repositories for 2 repositories over 3 runs, linear scale",
-		"Check time for biomejs/biome over 3 runs",
-		"Diagnostics by severity for biomejs/biome over 3 runs",
-	];
-	for (const width of [1440, 1024, 390]) {
-		await page.viewport(width, 1000);
-		const screen = await render(Dashboard, { data });
-		const main = screen.getByRole("main").element();
-		const heading = screen.getByRole("heading", {
-			name: "Ecosystem CI trends",
-		});
-
-		const elements = Array.from(
-			main.querySelectorAll(
-				"header, section, [role=status], table th, table td, svg",
-			),
-		);
-		expect(elements.length).toBeGreaterThan(20);
-		const measure = () =>
-			elements.map((element) => {
-				const rect = element.getBoundingClientRect();
-				return {
-					x: rect.x + window.scrollX,
-					y: rect.y + window.scrollY,
-					width: rect.width,
-					height: rect.height,
-				};
+test.each(["inherit", "Arial, sans-serif"])(
+	"hovering a chart does not shift the dashboard layout (%s)",
+	async (font) => {
+		const charts = [
+			"Check time across repositories for 2 repositories over 3 runs, linear scale",
+			"Check time for biomejs/biome over 3 runs",
+			"Diagnostics by severity for biomejs/biome over 3 runs",
+		];
+		for (const width of [1440, 1024, 390, 360, 320]) {
+			await page.viewport(width, 1000);
+			const screen = await render(Dashboard, { data });
+			const main = screen.getByRole("main").element();
+			// Cover both the platform UI font and alternate text-wrapping boundaries.
+			main.style.fontFamily = font;
+			const heading = screen.getByRole("heading", {
+				name: "Ecosystem CI trends",
 			});
-		for (const name of charts) {
-			const chart = screen.getByRole("img", { name, exact: true });
-			// Scroll before measuring so Playwright's hover doesn't change the baseline.
-			chart.element().scrollIntoView({ block: "center", inline: "center" });
-			await settleLayout();
-			const before = measure();
-			const chartWidth = chart.element().getBoundingClientRect().width;
-			for (const [index, x] of [1, chartWidth / 2, chartWidth - 1].entries()) {
-				await chart.hover({ position: { x, y: 40 } });
-				await expect.poll(() => hover.index).toBe(index);
-				await expect
-					.element(
-						page
-							.getByText(String(index + 1).repeat(7), { exact: true })
-							.first(),
-					)
-					.toBeVisible();
+
+			const elements = Array.from(
+				main.querySelectorAll(
+					"header, section, [role=status], table th, table td, svg",
+				),
+			);
+			expect(elements.length).toBeGreaterThan(20);
+			const measure = () =>
+				elements.map((element) => {
+					const rect = element.getBoundingClientRect();
+					return {
+						x: rect.x + window.scrollX,
+						y: rect.y + window.scrollY,
+						width: rect.width,
+						height: rect.height,
+					};
+				});
+			for (const name of charts) {
+				const chart = screen.getByRole("img", { name, exact: true });
+				// Scroll before measuring so Playwright's hover doesn't change the baseline.
+				chart.element().scrollIntoView({ block: "center", inline: "center" });
 				await settleLayout();
-				expect(measure(), `${name} at ${width}px, run ${index + 1}`).toEqual(
+				const before = measure();
+				const chartWidth = chart.element().getBoundingClientRect().width;
+				for (const [index, x] of [
+					1,
+					chartWidth / 2,
+					chartWidth - 1,
+				].entries()) {
+					await chart.hover({ position: { x, y: 40 } });
+					await expect.poll(() => hover.index).toBe(index);
+					await expect
+						.element(
+							page
+								.getByText(String(index + 1).repeat(7), { exact: true })
+								.first(),
+						)
+						.toBeVisible();
+					await settleLayout();
+					expect(measure(), `${name} at ${width}px, run ${index + 1}`).toEqual(
+						before,
+					);
+				}
+				await heading.hover();
+				await expect.poll(() => hover.index).toBeNull();
+				await settleLayout();
+				expect(measure(), `${name} at ${width}px after leaving`).toEqual(
 					before,
 				);
 			}
-			await heading.hover();
-			await expect.poll(() => hover.index).toBeNull();
-			await settleLayout();
-			expect(measure(), `${name} at ${width}px after leaving`).toEqual(before);
+			await screen.unmount();
 		}
-		await screen.unmount();
-	}
-}, 15_000);
+	},
+	15_000,
+);
 
 test("overview lines highlight the hovered repository and clear away from lines", async () => {
 	const screen = await render(Dashboard, { data });
