@@ -88,11 +88,12 @@ test.each(["inherit", "Arial, sans-serif"])(
 				name: "Ecosystem CI trends",
 			});
 
+			// Closed details content is not rendered and has no stable layout to compare.
 			const elements = Array.from(
 				main.querySelectorAll(
 					"header, section, [role=status], table th, table td, svg",
 				),
-			);
+			).filter((element) => element.checkVisibility());
 			expect(elements.length).toBeGreaterThan(20);
 			const measure = () =>
 				elements.map((element) => {
