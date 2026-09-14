@@ -5,6 +5,7 @@ build/
 .wrangler/
 __screenshots__/
 .vitest-attachments/
+/test/browser/test-results/
 /dashboard/data/runs/
 /dashboard/data/reports/
 /dashboard/data/manifest.json

@@ -10,6 +10,7 @@ export const landmarkTooltip: Action<SVGElement, string> = (node, initial) => {
 	tooltip.setAttribute("role", "tooltip");
 	tooltip.id = `landmark-tooltip-${crypto.randomUUID()}`;
 	node.setAttribute("tabindex", "0");
+	node.setAttribute("role", "group");
 	node.setAttribute("aria-label", description);
 	function hide() {
 		visible = false;
@@ -45,6 +46,7 @@ export const landmarkTooltip: Action<SVGElement, string> = (node, initial) => {
 		destroy() {
 			hide();
 			node.removeAttribute("tabindex");
+			node.removeAttribute("role");
 			node.removeAttribute("aria-label");
 			node.removeEventListener("pointerenter", show);
 			node.removeEventListener("pointerleave", hide);

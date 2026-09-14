@@ -14,6 +14,7 @@ test("tooltip appears only on a landmark, stays fixed and cleans up", () => {
 	const action = landmarkTooltip(mark, "base median 3 ms");
 	const tooltip = () => document.querySelector('[role="tooltip"]');
 	try {
+		expect(mark.getAttribute("role")).toBe("group");
 		svg.dispatchEvent(new PointerEvent("pointermove", { clientX: 150 }));
 		expect(tooltip()).toBeNull();
 		mark.dispatchEvent(new PointerEvent("pointerenter"));
@@ -34,4 +35,5 @@ test("tooltip appears only on a landmark, stays fixed and cleans up", () => {
 		svg.remove();
 	}
 	expect(tooltip()).toBeNull();
+	expect(mark.hasAttribute("role")).toBe(false);
 });

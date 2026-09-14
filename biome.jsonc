@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
 	"plugins": ["./biome-plugins/useZodNamespaceImport.grit"],
 	"vcs": {
 		"enabled": true,
@@ -41,21 +41,5 @@
 				"useTailwindShorthandClasses": "error"
 			}
 		}
-	},
-	"overrides": [
-		{
-			"includes": [
-				"dashboard/src/lib/trends/OverviewLines.svelte",
-				"dashboard/src/lib/trends/StackedArea.svelte",
-				"dashboard/src/lib/trends/TrendLine.svelte"
-			],
-			"linter": {
-				"rules": {
-					"a11y": {
-						"noNoninteractiveTabindex": "off"
-					}
-				}
-			}
-		}
-	]
+	}
 }

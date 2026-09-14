@@ -5,9 +5,14 @@ import viteConfig from "./vite.config.ts";
 export default mergeConfig(
 	viteConfig,
 	defineConfig({
+		optimizeDeps: { include: ["axe-core"] },
 		test: {
 			include: ["src/**/*.browser.test.ts"],
 			browser: {
+				commands: {
+					setColorScheme: ({ page }, colorScheme: "light" | "dark" | null) =>
+						page.emulateMedia({ colorScheme }),
+				},
 				enabled: true,
 				provider: playwright(),
 				headless: true,

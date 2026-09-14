@@ -1,3 +1,4 @@
+import axe from "axe-core";
 import { afterEach, expect, test } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-svelte";
@@ -56,6 +57,9 @@ const data: PageData = {
 
 afterEach(() => {
 	hover.index = null;
+	hover.pinned = null;
+	delete document.documentElement.dataset.theme;
+	document.documentElement.style.fontSize = "";
 });
 
 async function settleLayout() {
@@ -66,66 +70,79 @@ async function settleLayout() {
 	});
 }
 
-test("hovering a chart does not shift the dashboard layout", async () => {
-	const charts = [
-		"Check time across repositories for 2 repositories over 3 runs, linear scale",
-		"Check time for biomejs/biome over 3 runs",
-		"Diagnostics by severity for biomejs/biome over 3 runs",
-	];
-	for (const width of [1440, 1024, 390]) {
-		await page.viewport(width, 1000);
-		const screen = await render(Dashboard, { data });
-		const main = screen.getByRole("main").element();
-		const heading = screen.getByRole("heading", {
-			name: "Ecosystem CI trends",
-		});
-
-		const elements = Array.from(
-			main.querySelectorAll(
-				"header, section, [aria-live], section[aria-label] > div > div, svg",
-			),
-		);
-		expect(elements.length).toBeGreaterThan(20);
-		const measure = () =>
-			elements.map((element) => {
-				const rect = element.getBoundingClientRect();
-				return {
-					x: rect.x + window.scrollX,
-					y: rect.y + window.scrollY,
-					width: rect.width,
-					height: rect.height,
-				};
+test.each(["inherit", "Arial, sans-serif"])(
+	"hovering a chart does not shift the dashboard layout (%s)",
+	async (font) => {
+		const charts = [
+			"Check time across repositories for 2 repositories over 3 runs, linear scale",
+			"Check time for biomejs/biome over 3 runs",
+			"Diagnostics by severity for biomejs/biome over 3 runs",
+		];
+		for (const width of [1440, 1024, 390, 360, 320]) {
+			await page.viewport(width, 1000);
+			const screen = await render(Dashboard, { data });
+			const main = screen.getByRole("main").element();
+			// Cover both the platform UI font and alternate text-wrapping boundaries.
+			main.style.fontFamily = font;
+			const heading = screen.getByRole("heading", {
+				name: "Ecosystem CI trends",
 			});
-		for (const name of charts) {
-			const chart = screen.getByRole("img", { name, exact: true });
-			// Scroll before measuring so Playwright's hover doesn't change the baseline.
-			chart.element().scrollIntoView({ block: "center", inline: "center" });
-			await settleLayout();
-			const before = measure();
-			const chartWidth = chart.element().getBoundingClientRect().width;
-			for (const [index, x] of [1, chartWidth / 2, chartWidth - 1].entries()) {
-				await chart.hover({ position: { x, y: 40 } });
-				await expect.poll(() => hover.index).toBe(index);
-				await expect
-					.element(
-						page
-							.getByText(String(index + 1).repeat(7), { exact: true })
-							.first(),
-					)
-					.toBeVisible();
+
+			// Closed details content is not rendered and has no stable layout to compare.
+			const elements = Array.from(
+				main.querySelectorAll(
+					"header, section, [role=status], table th, table td, svg",
+				),
+			).filter((element) => element.checkVisibility());
+			expect(elements.length).toBeGreaterThan(20);
+			const measure = () =>
+				elements.map((element) => {
+					const rect = element.getBoundingClientRect();
+					return {
+						x: rect.x + window.scrollX,
+						y: rect.y + window.scrollY,
+						width: rect.width,
+						height: rect.height,
+					};
+				});
+			for (const name of charts) {
+				const chart = screen.getByRole("img", { name, exact: true });
+				// Scroll before measuring so Playwright's hover doesn't change the baseline.
+				chart.element().scrollIntoView({ block: "center", inline: "center" });
 				await settleLayout();
-				expect(measure(), `${name} at ${width}px, run ${index + 1}`).toEqual(
+				const before = measure();
+				const chartWidth = chart.element().getBoundingClientRect().width;
+				for (const [index, x] of [
+					1,
+					chartWidth / 2,
+					chartWidth - 1,
+				].entries()) {
+					await chart.hover({ position: { x, y: 40 } });
+					await expect.poll(() => hover.index).toBe(index);
+					await expect
+						.element(
+							page
+								.getByText(String(index + 1).repeat(7), { exact: true })
+								.first(),
+						)
+						.toBeVisible();
+					await settleLayout();
+					expect(measure(), `${name} at ${width}px, run ${index + 1}`).toEqual(
+						before,
+					);
+				}
+				await heading.hover();
+				await expect.poll(() => hover.index).toBeNull();
+				await settleLayout();
+				expect(measure(), `${name} at ${width}px after leaving`).toEqual(
 					before,
 				);
 			}
-			await heading.hover();
-			await expect.poll(() => hover.index).toBeNull();
-			await settleLayout();
-			expect(measure(), `${name} at ${width}px after leaving`).toEqual(before);
+			await screen.unmount();
 		}
-		await screen.unmount();
-	}
-}, 15_000);
+	},
+	15_000,
+);
 
 test("overview lines highlight the hovered repository and clear away from lines", async () => {
 	const screen = await render(Dashboard, { data });
@@ -201,4 +218,95 @@ test("overview lines highlight the hovered repository and clear away from lines"
 		}
 		svg.dispatchEvent(new PointerEvent("pointerleave"));
 	}
+});
+
+test("themes and semantic tables remain accessible at mobile and desktop widths", async () => {
+	for (const theme of ["light", "dark"]) {
+		document.documentElement.dataset.theme = theme;
+		for (const width of [320, 1440]) {
+			await page.viewport(width, 1000);
+			const screen = await render(Dashboard, { data });
+			await settleLayout();
+			const main = screen.getByRole("main").element();
+			expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+				window.innerWidth,
+			);
+			expect(main.querySelectorAll("svg[tabindex]")).toHaveLength(0);
+			expect(main.querySelectorAll("table thead th[scope=col]")).toHaveLength(
+				14,
+			);
+			expect((await axe.run(main)).violations).toEqual([]);
+			await screen.unmount();
+		}
+	}
+});
+
+test("run inspection preserves sample statistics and clears on a different branch", async () => {
+	const screen = await render(Dashboard, { data });
+	const inspect = screen.getByRole("combobox", {
+		name: "Inspect run",
+		exact: true,
+	});
+	await inspect.selectOptions("0");
+	await expect
+		.element(screen.getByRole("status"))
+		.toHaveTextContent("Inspecting run #1");
+	await expect
+		.element(screen.getByRole("button", { name: "Previous run" }))
+		.toBeDisabled();
+	await screen.getByRole("button", { name: "Next run" }).click();
+	await expect.element(inspect).toHaveValue("1");
+	const svg = screen
+		.getByRole("img", {
+			name: "Check time for biomejs/biome over 3 runs",
+			exact: true,
+		})
+		.element();
+	svg.dispatchEvent(
+		new PointerEvent("pointermove", {
+			bubbles: true,
+			clientX: svg.getBoundingClientRect().right - 1,
+		}),
+	);
+	await expect.poll(() => hover.index).toBe(2);
+	svg.dispatchEvent(new PointerEvent("pointerleave"));
+	await expect.poll(() => hover.index).toBe(1);
+	await screen.getByText("Historical data", { exact: true }).click();
+	const history = screen
+		.getByRole("region", { name: "Historical observations", exact: true })
+		.element();
+	expect(history.textContent).toContain("1,234 ms median");
+	expect(history.textContent).toMatch(/Min\s+987\.2\s+ms/);
+	expect(history.textContent).toContain("3 samples");
+	await screen
+		.getByRole("combobox", { name: "Customer repository", exact: true })
+		.selectOptions("withastro/astro");
+	expect(history.textContent).toContain(
+		"Missing repository data: no report received.",
+	);
+	expect(
+		(await axe.run(screen.getByRole("main").element())).violations,
+	).toEqual([]);
+	await screen.rerender({
+		data: {
+			...data,
+			branch: "other",
+			branches: ["other"],
+			runs: [{ ...runs[0], biomeBranch: "other" }],
+		},
+	});
+	await expect.element(inspect).toHaveValue("");
+	await expect.poll(() => hover.pinned).toBeNull();
+});
+
+test("an empty history still exposes the page heading and empty state", async () => {
+	const screen = await render(Dashboard, {
+		data: { runs: [], history: [], branches: [], branch: null },
+	});
+	await expect
+		.element(screen.getByRole("heading", { level: 1 }))
+		.toHaveTextContent("Ecosystem CI trends");
+	await expect
+		.element(screen.getByText("No runs have been stored."))
+		.toBeVisible();
 });

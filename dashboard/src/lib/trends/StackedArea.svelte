@@ -2,7 +2,7 @@
 // Rule diagnostics by severity for one repository, stacked; gaps where a run has no result.
 import type { Run } from "./data";
 import { formatDay, niceTicks } from "./format";
-import { hover } from "./hover.svelte";
+import { hover, validRunIndex } from "./hover.svelte";
 
 interface Layer {
 	key: string;
@@ -14,7 +14,7 @@ interface Layer {
 let {
 	runs,
 	layers,
-	height = 80,
+	height = 88,
 	axis = "none",
 	ariaLabel,
 }: {
@@ -27,11 +27,12 @@ let {
 } = $props();
 
 let width = $state(300);
+const descriptionId = $props.id();
 const m = $derived({
-	left: 6,
+	left: 8,
 	right: 8,
-	top: 6,
-	bottom: axis === "none" ? 4 : 18,
+	top: 10,
+	bottom: axis === "none" ? 8 : 28,
 });
 const pw = $derived(Math.max(10, width - m.left - m.right));
 const ph = $derived(height - m.top - m.bottom);
@@ -83,46 +84,47 @@ function areaPath(k: number): string {
 
 const xTicks = $derived.by(() => {
 	const n = runs.length;
-	const maxTicks = Math.max(2, Math.min(8, Math.floor(pw / 70)));
+	const maxTicks = Math.max(1, Math.min(8, Math.floor(pw / 90)));
 	if (n <= maxTicks) return runs.map((_, i) => i);
-	const step = Math.ceil((n - 1) / maxTicks);
+	if (maxTicks === 1) return [n - 1];
+	const step = Math.ceil((n - 1) / (maxTicks - 1));
 	const out: number[] = [];
 	for (let i = n - 1; i >= 0; i -= step) out.unshift(i);
 	return out;
 });
 
-const hi = $derived(hover.index);
+const hi = $derived(validRunIndex(hover.index, runs.length));
 function onpointermove(e: PointerEvent) {
+	if (runs.length === 0) {
+		hover.index = null;
+		return;
+	}
 	const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
 	const i = Math.round(
 		((e.clientX - rect.left - m.left) / pw) * (runs.length - 1),
 	);
 	hover.index = Math.max(0, Math.min(runs.length - 1, i));
 }
-function onkeydown(e: KeyboardEvent) {
-	if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-	e.preventDefault();
-	const cur = hover.index ?? runs.length - 1;
-	hover.index = Math.max(
-		0,
-		Math.min(runs.length - 1, cur + (e.key === "ArrowLeft" ? -1 : 1)),
-	);
-}
 </script>
 
 <div class="min-w-0 overflow-hidden" bind:clientWidth={width}>
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 	<svg
 		{width}
 		{height}
 		class="block select-none"
 		role="img"
 		aria-label={ariaLabel}
-		tabindex="0"
+		aria-describedby={descriptionId}
 		{onpointermove}
-		onpointerleave={() => (hover.index = null)}
-		{onkeydown}
+		onpointerleave={() => (hover.index = validRunIndex(hover.pinned, runs.length))}
 	>
+		<title>{ariaLabel}</title>
+		<desc id={descriptionId}>
+			Rule diagnostics stacked from bottom to top:
+			{layers.map((layer) => layer.label).join(", ")}. Gaps indicate unavailable
+			observations, not zero. Use the run inspector or historical data table for
+			exact values and keyboard access.
+		</desc>
 		{#each ticks as t (t)}
 			<line
 				x1={m.left}
@@ -146,7 +148,7 @@ function onkeydown(e: KeyboardEvent) {
 				<text
 					x={x(i)}
 					y={height - 5}
-					text-anchor={i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle"}
+					text-anchor={runs.length === 1 ? "middle" : i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle"}
 					font-size="var(--text-chart)"
 					fill="var(--color-muted)"
 				>
@@ -154,13 +156,13 @@ function onkeydown(e: KeyboardEvent) {
 				</text>
 			{/each}
 		{/if}
-		{#if hi !== null && hi < runs.length}
+		{#if hi !== null}
 			<line
 				x1={x(hi)}
 				x2={x(hi)}
 				y1={m.top}
 				y2={m.top + ph}
-				stroke="var(--color-ink-2)"
+				stroke="var(--color-base)"
 			/>
 		{/if}
 	</svg>

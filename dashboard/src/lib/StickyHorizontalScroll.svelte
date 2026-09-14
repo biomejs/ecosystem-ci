@@ -49,13 +49,16 @@ $effect(() => {
 			<div class="h-px" style:width={`${contentWidth}px`}></div>
 		</div>
 	{/if}
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<!-- biome-ignore-start lint/a11y/noNoninteractiveTabindex: The scroll region needs keyboard access. -->
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex (The scroll region needs keyboard access.) -->
 	<section
 		class={`min-w-0 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden ${className}`}
 		bind:this={viewport}
 		aria-label={label}
+		tabindex={overflowing ? 0 : undefined}
 		onscroll={(event) => syncScroll(event.currentTarget, proxy)}
 	>
 		{@render children()}
 	</section>
+	<!-- biome-ignore-end lint/a11y/noNoninteractiveTabindex: The scroll region needs keyboard access. -->
 </div>

@@ -16,7 +16,7 @@
 		"deploy": "pnpm --dir dashboard run deploy && pnpm --dir ingest run deploy"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.12",
+		"@biomejs/biome": "2.5.13",
 		"tsx": "^4.20.5",
 		"vitest": "^4.1.11"
 	}
