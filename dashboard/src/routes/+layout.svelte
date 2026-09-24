@@ -55,42 +55,60 @@ $effect(() => {
 	href="#main-content"
 	>Skip to content</a
 >
-<header class="border-b border-hair">
-	<div
-		class="mx-auto flex max-w-dashboard flex-wrap items-center gap-3 px-page-gutter py-4 sm:gap-x-8 sm:gap-y-4"
-	>
-		<a
-			class="inline-flex w-full items-center gap-3 text-ink no-underline sm:w-auto"
-			href="/"
-			aria-label="Biome Ecosystem CI home"
+<div class="flex min-h-screen flex-col">
+	<header class="border-b border-hair">
+		<div
+			class="mx-auto flex max-w-dashboard flex-wrap items-center gap-3 px-page-gutter py-4 sm:gap-x-8 sm:gap-y-4"
 		>
-			<img src="/favicon.svg" alt="" width="40" height="40">
-			<span class="flex flex-wrap items-baseline gap-x-3 gap-y-1"
-				><strong class="text-brand tracking-tighter">Biome</strong
-				><span class="text-ink-2 text-sm">Ecosystem CI</span></span
+			<a
+				class="inline-flex w-full items-center gap-3 text-ink no-underline sm:w-auto"
+				href="/"
+				aria-label="Biome Ecosystem CI home"
 			>
-		</a>
-		<nav class="flex min-w-0 flex-wrap sm:gap-2" aria-label="Main navigation">
-			{#each [{ href: "/", label: "Trends" }, { href: "/compare", label: "Compare" }] as item (item.href)}
-				<a
-					class="inline-flex min-h-11 items-center border-b-3 border-transparent p-2 text-ink-2 no-underline aria-current:border-accent aria-current:font-semibold aria-current:text-accent sm:px-3"
-					href={item.href}
-					aria-current={page.url.pathname === item.href ? "page" : undefined}
-					>{item.label}</a
+				<img src="/favicon.svg" alt="" width="40" height="40">
+				<span class="flex flex-wrap items-baseline gap-x-3 gap-y-1"
+					><strong class="text-brand tracking-tighter">Biome</strong
+					><span class="text-ink-2 text-sm">Ecosystem CI</span></span
 				>
-			{/each}
-		</nav>
-		<label
-			for="theme"
-			class="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-1.5 text-sm sm:gap-2.5"
+			</a>
+			<nav class="flex min-w-0 flex-wrap sm:gap-2" aria-label="Main navigation">
+				{#each [
+				{ href: "/", label: "Trends" },
+				{ href: "/compare", label: "Compare" },
+				{
+					href: "https://github.com/biomejs/ecosystem-ci/actions/workflows/ecosystem-ci.yml",
+					label: "CI runs",
+				},
+			] as item (item.href)}
+					<a
+						class="inline-flex min-h-11 items-center border-b-3 border-transparent p-2 text-ink-2 no-underline aria-current:border-accent aria-current:font-semibold aria-current:text-accent sm:px-3"
+						href={item.href}
+						aria-current={page.url.pathname === item.href ? "page" : undefined}
+						>{item.label}</a
+					>
+				{/each}
+			</nav>
+			<label
+				for="theme"
+				class="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-1.5 text-sm sm:gap-2.5"
+			>
+				<span>Theme</span>
+				<Select id="theme" bind:value={preference}>
+					<option value="system">System</option>
+					<option value="light">Light</option>
+					<option value="dark">Dark</option>
+				</Select>
+			</label>
+		</div>
+	</header>
+	<div class="flex-1">{@render children()}</div>
+	<footer class="border-t border-hair">
+		<nav
+			class="mx-auto flex max-w-dashboard flex-wrap gap-x-6 gap-y-1 px-page-gutter py-4 text-sm"
+			aria-label="Repositories"
 		>
-			<span>Theme</span>
-			<Select id="theme" bind:value={preference}>
-				<option value="system">System</option>
-				<option value="light">Light</option>
-				<option value="dark">Dark</option>
-			</Select>
-		</label>
-	</div>
-</header>
-{@render children()}
+			<a href="https://github.com/biomejs/ecosystem-ci">Ecosystem CI repo</a>
+			<a href="https://github.com/biomejs/biome">Biome repo</a>
+		</nav>
+	</footer>
+</div>
