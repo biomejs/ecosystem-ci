@@ -120,8 +120,8 @@ jobs:
             repository: baptisteArno/typebot.io
             ref: 4bc37a4b5befe07de1739f5d52d8d1e7c05dcc9b
           - id: coss
-            repository: cosscom/coss
-            ref: 4ebe375c04cc574dc2eaade2380b3cf9a48fceaa
+            repository: cosscom/ui
+            ref: 6270fdd37dce05a9d0b651f53f2e632a160d6da3
           - id: superset
             repository: superset-sh/superset
             ref: bfc68940b1b10bce61a435a8957101b3b9d06b04
